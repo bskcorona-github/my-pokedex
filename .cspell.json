@@ -1,0 +1,16 @@
+{
+    "version": "0.2",
+    "language": "en",
+    "words": [
+      "Nuxt",
+      "nuxtjs",
+      "pokemons",
+      "axios",
+      "pokeids"
+    ],
+    "ignorePaths": [
+      "node_modules",
+      "dist"
+    ]
+  }
+  
