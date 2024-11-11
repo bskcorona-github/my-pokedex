@@ -1,9 +1,9 @@
 // backend/pages/api/pokemon.ts
-import type { NextApiRequest, NextApiResponse } from 'next'
+import type { NextApiRequest, NextApiResponse } from 'next';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // CORS設定
-  res.setHeader('Access-Control-Allow-Origin', '*'); // 必要に応じて特定のURLに制限
+  res.setHeader('Access-Control-Allow-Origin', 'https://my-pokedex-frontend.vercel.app'); // フロントエンドURLに限定
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 

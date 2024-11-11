@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  trailingSlash: true, // trailingSlashの設定
+  trailingSlash: false, // trailingSlashを無効にする
 
   async headers() {
     return [
