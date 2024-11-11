@@ -1,0 +1,6 @@
+{
+    "builds": [
+      { "src": "backend/next.config.js", "use": "@vercel/next" }
+    ]
+  }
+  
