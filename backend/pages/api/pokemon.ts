@@ -2,10 +2,13 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-    res.setHeader('Access-Control-Allow-Origin', '*'); 
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
-
+    res.setHeader('Access-Control-Allow-Origin', '*'); // 必要に応じて特定のURLに制限
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    if (req.method === 'OPTIONS') {
+        res.status(200).end();
+        return;
+      }
   try {
     const response = await fetch('https://pokeapi.co/api/v2/pokemon?limit=151')
     const data = await response.json()
