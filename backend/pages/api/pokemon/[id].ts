@@ -102,9 +102,11 @@ interface PokemonStat {
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  res.setHeader('Access-Control-Allow-Origin', '*')
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+  // CORS設定
+  res.setHeader('Access-Control-Allow-Origin', '*'); // 必要に応じて特定のドメインに制限
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
 
   const { id } = req.query
 
