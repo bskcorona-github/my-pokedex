@@ -6,7 +6,8 @@
       "nuxtjs",
       "pokemons",
       "axios",
-      "pokeids"
+      "pokeids",
+      "pokeball"
     ],
     "ignorePaths": [
       "node_modules",
