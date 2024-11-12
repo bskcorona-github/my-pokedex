@@ -7,16 +7,17 @@ const limit = pLimit(5);
 const cache = new NodeCache({ stdTTL: 3600 }); // キャッシュを1時間保持
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  res.setHeader('Access-Control-Allow-Origin', 'https://my-pokedex-frontend.vercel.app');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
+  // CORSヘッダー設定
   if (req.method === 'OPTIONS') {
+    res.setHeader('Access-Control-Allow-Origin', 'https://my-pokedex-frontend.vercel.app');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
     res.status(200).end();
     return;
   }
 
-  const cachedData = cache.get('pokemonData');
+  // キャッシュの確認とレスポンス
+  const cachedData = cache.get<{ id: string; name: string; englishName: string; image: string; number: string }[]>('pokemonData');
   if (cachedData) {
     res.status(200).json({ results: cachedData });
     return;
@@ -24,7 +25,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     const response = await fetch('https://pokeapi.co/api/v2/pokemon?limit=151');
-    const data = (await response.json()) as { results: { name: string; url: string }[] };
+    const data = await response.json() as { results: { name: string; url: string }[] };
 
     const results = await Promise.all(
       data.results.map((pokemon) =>
@@ -33,14 +34,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
           // ポケモンの詳細データ取得（名前と画像）
           const pokemonResponse = await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`);
-          const pokemonData = (await pokemonResponse.json()) as {
+          const pokemonData = await pokemonResponse.json() as {
             sprites: { front_default: string | null };
             name: string;
           };
 
           // ポケモン種データから日本語名を取得
           const speciesResponse = await fetch(`https://pokeapi.co/api/v2/pokemon-species/${id}`);
-          const speciesData = (await speciesResponse.json()) as {
+          const speciesData = await speciesResponse.json() as {
             names: { language: { name: string }; name: string }[];
           };
 
