@@ -67,10 +67,10 @@ onMounted(async () => {
   flex-direction: column;
   align-items: center;
   width: 150px;
-  border-radius: 10px; /* カードの角丸 */
+  border-radius: 10px;
   overflow: hidden;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* 影を追加 */
-  background-color: #f3f4f6; /* カード背景色 */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  background-color: #f3f4f6;
   transition: transform 0.2s;
   text-align: center;
 }
@@ -80,10 +80,10 @@ onMounted(async () => {
 }
 
 .pokemon-header {
-  background-color: #d1e7f8; /* ヘッダー部分の背景色 */
+  background-color: #a4d0e7; /* ヘッダーの色を少し濃く変更 */
   width: 100%;
   padding: 10px 0;
-  color: #333; /* テキスト色 */
+  color: #333;
   font-weight: bold;
   display: flex;
   flex-direction: column;
@@ -94,6 +94,7 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   margin-bottom: 5px;
+  text-decoration: none; /* 下線を消す */
 }
 
 .pokeball-icon {
@@ -105,13 +106,14 @@ onMounted(async () => {
 .pokemon-number {
   font-size: 12px;
   font-weight: bold;
-  color: #555;
+  color: #fff; /* 白文字に変更 */
 }
 
 .pokemon-name {
   font-size: 16px;
   font-weight: bold;
   color: #00796b;
+  text-decoration: none; /* 下線を消す */
 }
 
 .pokemon-image {
