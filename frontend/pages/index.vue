@@ -3,19 +3,21 @@
     <h1>ポケモン図鑑</h1>
     <ul class="pokemon-list">
       <li v-for="pokemon in pokemons" :key="pokemon.id" class="pokemon-card">
-        <router-link :to="`/pokemon/${pokemon.id}`">
-          <!-- モンスターボールの画像とポケモンの番号を表示 -->
+        <div class="pokemon-header">
           <div class="pokemon-info">
             <img :src="pokemon.ballImage" class="pokeball-icon" alt="Pokeball Icon" />
             <span class="pokemon-number">{{ pokemon.number }}</span>
           </div>
-          <img :src="pokemon.image" alt="ポケモンの画像" width="100" height="100" />
+          <span class="pokemon-name">{{ pokemon.name }}</span>
+        </div>
+        <router-link :to="`/pokemon/${pokemon.id}`">
+          <img :src="pokemon.image" alt="ポケモンの画像" class="pokemon-image" />
         </router-link>
-        <router-link :to="`/pokemon/${pokemon.id}`">{{ pokemon.name }}</router-link>
       </li>
     </ul>
   </div>
 </template>
+
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
@@ -47,7 +49,6 @@ onMounted(async () => {
   }))
 })
 </script>
-
 <style scoped>
 .pokemon-list {
   display: grid;
@@ -62,23 +63,32 @@ onMounted(async () => {
   flex-direction: column;
   align-items: center;
   width: 150px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  padding: 10px;
-  text-align: center;
-  background-color: #f9f9f9;
+  border-radius: 10px; /* カードの角丸 */
+  overflow: hidden;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* 影を追加 */
+  background-color: #f3f4f6; /* カード背景色 */
   transition: transform 0.2s;
+  text-align: center;
 }
 
 .pokemon-card:hover {
   transform: scale(1.05);
 }
 
+.pokemon-header {
+  background-color: #d1e7f8; /* ヘッダー部分の背景色 */
+  width: 100%;
+  padding: 10px 0;
+  color: #333; /* テキスト色 */
+  font-weight: bold;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
 .pokemon-info {
   display: flex;
   align-items: center;
-  justify-content: flex-start;
-  width: 100%;
   margin-bottom: 5px;
 }
 
@@ -91,5 +101,20 @@ onMounted(async () => {
 .pokemon-number {
   font-size: 12px;
   font-weight: bold;
+  color: #555;
+}
+
+.pokemon-name {
+  font-size: 16px;
+  font-weight: bold;
+  color: #00796b;
+}
+
+.pokemon-image {
+  width: 100px;
+  height: 100px;
+  padding: 10px;
 }
 </style>
+
+
