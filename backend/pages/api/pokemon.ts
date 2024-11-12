@@ -17,7 +17,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   // キャッシュの確認とレスポンス
-  const cachedData = cache.get<{ id: string; name: string; englishName: string; image: string; number: string }[]>('pokemonData');
+  const cachedData = cache.get('pokemonData');
   if (cachedData) {
     res.status(200).json({ results: cachedData });
     return;
@@ -51,7 +51,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           return {
             id,
             name: japaneseName,  // 日本語名
-            englishName: pokemonData.name,  // 英語名
             image: pokemonData.sprites.front_default || '',
             number: `No.${String(id).padStart(3, '0')}` // 3桁の番号
           };
