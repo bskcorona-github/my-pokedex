@@ -42,7 +42,7 @@ onMounted(async () => {
     name: pokemon.name,
     url: pokemon.url,
     image: pokemon.image,
-    ballImage: pokemon.ballImage,   // モンスターボール画像のURL
+    ballImage: '/pokeball.png',   // モンスターボール画像のURL
     number: pokemon.number          // ポケモンの番号
   }))
 })
