@@ -55,7 +55,7 @@ onMounted(async () => {
 </script>
 <style scoped>
 body {
-  background-color: #e0f7fa; /* 薄い青 */
+  background-color: #e0f7fa; 
   margin: 0;
   padding: 0;
   font-family: Arial, sans-serif;
@@ -114,6 +114,9 @@ body {
   width: 20px;
   height: 20px;
   margin-right: 5px;
+  background-color: #a4d0e7; /* ヘッダー部分と同じ背景色 */
+  border-radius: 50%; /* 円形の背景を適用 */
+  padding: 2px; /* モンスターボールの画像周りに余白を追加 */
 }
 
 .pokemon-number {
