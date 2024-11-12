@@ -49,6 +49,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             speciesData.names.find((entry) => entry.language.name === 'ja')?.name || pokemonData.name;
 
           return {
+            id,
             name: japaneseName,  // 日本語名
             image: pokemonData.sprites.front_default || '',
             number: `No.${String(id).padStart(3, '0')}` // 3桁の番号
