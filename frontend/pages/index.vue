@@ -3,18 +3,19 @@
     <h1>ポケモン図鑑</h1>
     <ul class="pokemon-list">
       <li v-for="pokemon in pokemons" :key="pokemon.id" class="pokemon-card">
-        <!-- ポケモンカード全体をリンクで囲む -->
-        <router-link :to="`/pokemon/${pokemon.id}`" class="pokemon-link">
-          <div class="pokemon-header">
-            <div class="pokemon-info">
-              <img :src="pokemon.ballImage" class="pokeball-icon" alt="Pokeball Icon" />
-              <span class="pokemon-number">{{ pokemon.number }}</span>
-            </div>
-            <span class="pokemon-name">{{ pokemon.name }}</span>
+        <div class="pokemon-header">
+          <div class="pokemon-info">
+            <img :src="pokemon.ballImage" class="pokeball-icon" alt="Pokeball Icon" />
+        <router-link :to="`/pokemon/${pokemon.id}`">
+            <span class="pokemon-number">{{ pokemon.number }}</span>
+        </router-link>
           </div>
-          <div class="pokemon-image-wrapper">
-            <img :src="pokemon.image" alt="ポケモンの画像" class="pokemon-image" />
-          </div>
+        <router-link :to="`/pokemon/${pokemon.id}`">
+          <span class="pokemon-name">{{ pokemon.name }}</span>
+        </router-link>
+        </div>
+        <router-link :to="`/pokemon/${pokemon.id}`">
+          <img :src="pokemon.image" alt="ポケモンの画像" class="pokemon-image" />
         </router-link>
       </li>
     </ul>
