@@ -1,8 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import fetch from 'node-fetch';
+import NodeCache from 'node-cache';
 import pLimit from 'p-limit';
 
-const limit = pLimit(5); // 最大同時リクエスト数を5に設定
+const limit = pLimit(5);
+const cache = new NodeCache({ stdTTL: 3600 }); // キャッシュを1時間保持
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   res.setHeader('Access-Control-Allow-Origin', 'https://my-pokedex-frontend.vercel.app');
@@ -11,6 +13,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (req.method === 'OPTIONS') {
     res.status(200).end();
+    return;
+  }
+
+  const cachedData = cache.get('pokemonData');
+  if (cachedData) {
+    res.status(200).json({ results: cachedData });
     return;
   }
 
@@ -23,33 +31,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         limit(async () => {
           const id = pokemon.url.split('/').filter(Boolean).pop();
 
-          // ポケモンの詳細データ取得
+          // ポケモンの必要な最低限のデータのみ取得（名前と画像）
           const pokemonResponse = await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`);
           const pokemonData = (await pokemonResponse.json()) as {
             sprites: { front_default: string | null };
             name: string;
           };
 
-          // ポケモン種データ取得
-          const speciesResponse = await fetch(`https://pokeapi.co/api/v2/pokemon-species/${id}`);
-          const speciesData = (await speciesResponse.json()) as {
-            names: { language: { name: string }; name: string }[];
-          };
-
-          // 日本語名を取得
-          const japaneseName =
-            speciesData.names.find((entry) => entry.language.name === 'ja')?.name || pokemon.name;
-
           return {
             id,
-            name: japaneseName,
-            englishName: pokemon.name,
-            image: pokemonData.sprites.front_default || '',
+            name: pokemonData.name,  // 英語名
+            image: pokemonData.sprites.front_default || '', // 画像URL
           };
         })
       )
     );
 
+    cache.set('pokemonData', results); // キャッシュに保存
     res.status(200).json({ results });
   } catch (error) {
     console.error('エラー内容:', error);
