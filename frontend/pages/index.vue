@@ -54,6 +54,13 @@ onMounted(async () => {
 })
 </script>
 <style scoped>
+body {
+  background-color: #e0f7fa; /* 薄い青 */
+  margin: 0;
+  padding: 0;
+  font-family: Arial, sans-serif;
+}
+
 .pokemon-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
@@ -77,6 +84,12 @@ onMounted(async () => {
 
 .pokemon-card:hover {
   transform: scale(1.05);
+}
+
+.pokemon-link {
+  display: block;
+  text-decoration: none;
+  color: inherit;
 }
 
 .pokemon-header {
