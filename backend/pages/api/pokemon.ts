@@ -31,17 +31,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         limit(async () => {
           const id = pokemon.url.split('/').filter(Boolean).pop();
 
-          // ポケモンの必要な最低限のデータのみ取得（名前と画像）
+          // ポケモンの詳細データ取得（名前と画像）
           const pokemonResponse = await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`);
           const pokemonData = (await pokemonResponse.json()) as {
             sprites: { front_default: string | null };
             name: string;
           };
 
+          // ポケモン種データから日本語名を取得
+          const speciesResponse = await fetch(`https://pokeapi.co/api/v2/pokemon-species/${id}`);
+          const speciesData = (await speciesResponse.json()) as {
+            names: { language: { name: string }; name: string }[];
+          };
+
+          const japaneseName =
+            speciesData.names.find((entry) => entry.language.name === 'ja')?.name || pokemonData.name;
+
           return {
             id,
-            name: pokemonData.name,  // 英語名
-            image: pokemonData.sprites.front_default || '', // 画像URL
+            name: japaneseName,  // 日本語名
+            englishName: pokemonData.name,  // 英語名
+            image: pokemonData.sprites.front_default || '',
           };
         })
       )
