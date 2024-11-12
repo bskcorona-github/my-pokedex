@@ -16,21 +16,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     const response = await fetch('https://pokeapi.co/api/v2/pokemon?limit=151');
-    const data = await response.json();
+    const data = (await response.json()) as { results: { name: string; url: string }[] };
 
     const results = await Promise.all(
-      data.results.map((pokemon: { name: string; url: string }) =>
+      data.results.map((pokemon) =>
         limit(async () => {
           const id = pokemon.url.split('/').filter(Boolean).pop();
+
+          // ポケモンの詳細データ取得
           const pokemonResponse = await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`);
-          const pokemonData = await pokemonResponse.json();
+          const pokemonData = (await pokemonResponse.json()) as {
+            sprites: { front_default: string | null };
+            name: string;
+          };
 
+          // ポケモン種データ取得
           const speciesResponse = await fetch(`https://pokeapi.co/api/v2/pokemon-species/${id}`);
-          const speciesData = await speciesResponse.json();
+          const speciesData = (await speciesResponse.json()) as {
+            names: { language: { name: string }; name: string }[];
+          };
 
-          const japaneseName = speciesData.names.find(
-            (entry: { language: { name: string }; name: string }) => entry.language.name === 'ja'
-          )?.name || pokemon.name;
+          // 日本語名を取得
+          const japaneseName =
+            speciesData.names.find((entry) => entry.language.name === 'ja')?.name || pokemon.name;
 
           return {
             id,
