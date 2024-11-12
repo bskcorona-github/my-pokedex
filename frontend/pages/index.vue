@@ -6,15 +6,15 @@
         <div class="pokemon-header">
           <div class="pokemon-info">
             <img :src="pokemon.ballImage" class="pokeball-icon" alt="Pokeball Icon" />
-        <router-link :to="`/pokemon/${pokemon.id}`">
+            <router-link :to="`/pokemon/${pokemon.id}`" class="pokemon-link">
             <span class="pokemon-number">{{ pokemon.number }}</span>
         </router-link>
           </div>
-        <router-link :to="`/pokemon/${pokemon.id}`">
+          <router-link :to="`/pokemon/${pokemon.id}`" class="pokemon-link">
           <span class="pokemon-name">{{ pokemon.name }}</span>
         </router-link>
         </div>
-        <router-link :to="`/pokemon/${pokemon.id}`">
+        <router-link :to="`/pokemon/${pokemon.id}`" class="pokemon-link">
           <img :src="pokemon.image" alt="ポケモンの画像" class="pokemon-image" />
         </router-link>
       </li>
