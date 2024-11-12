@@ -66,10 +66,10 @@ onMounted(async () => {
   flex-direction: column;
   align-items: center;
   width: 150px;
-  border-radius: 10px;
+  border-radius: 10px; /* カードの角丸 */
   overflow: hidden;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  background-color: #f3f4f6;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* 影を追加 */
+  background-color: #f3f4f6; /* カード背景色 */
   transition: transform 0.2s;
   text-align: center;
 }
@@ -79,10 +79,10 @@ onMounted(async () => {
 }
 
 .pokemon-header {
-  background-color: #d1e7f8;
+  background-color: #d1e7f8; /* ヘッダー部分の背景色 */
   width: 100%;
   padding: 10px 0;
-  color: #333;
+  color: #333; /* テキスト色 */
   font-weight: bold;
   display: flex;
   flex-direction: column;
@@ -93,12 +93,6 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   margin-bottom: 5px;
-  text-decoration: none; /* リンク下線を削除 */
-  color: inherit;
-}
-
-.pokemon-info:hover {
-  color: #00796b;
 }
 
 .pokeball-icon {
@@ -117,27 +111,13 @@ onMounted(async () => {
   font-size: 16px;
   font-weight: bold;
   color: #00796b;
-  text-decoration: none; /* リンク下線を削除 */
-}
-
-.pokemon-image-wrapper {
-  position: relative;
-  width: 100px;
-  height: 100px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-image: url('/pokeball-bg.png');
-  background-size: 80%;
-  background-position: center;
-  background-repeat: no-repeat;
 }
 
 .pokemon-image {
-  position: relative;
-  width: 80px;
-  height: 80px;
-  z-index: 1;
+  width: 100px;
+  height: 100px;
+  padding: 10px;
 }
 </style>
+
 
