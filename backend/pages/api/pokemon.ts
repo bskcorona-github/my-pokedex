@@ -52,7 +52,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             name: japaneseName,  // 日本語名
             englishName: pokemonData.name,  // 英語名
             image: pokemonData.sprites.front_default || '',
-            ballImage: '/pokeball.png',
             number: `No.${String(id).padStart(3, '0')}` // 3桁の番号
           };
         })
