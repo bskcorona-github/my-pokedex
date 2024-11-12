@@ -3,15 +3,18 @@
     <h1>ポケモン図鑑</h1>
     <ul class="pokemon-list">
       <li v-for="pokemon in pokemons" :key="pokemon.id" class="pokemon-card">
-        <div class="pokemon-header">
-          <div class="pokemon-info">
-            <img :src="pokemon.ballImage" class="pokeball-icon" alt="Pokeball Icon" />
-            <span class="pokemon-number">{{ pokemon.number }}</span>
+        <!-- ポケモンカード全体をリンクで囲む -->
+        <router-link :to="`/pokemon/${pokemon.id}`" class="pokemon-link">
+          <div class="pokemon-header">
+            <div class="pokemon-info">
+              <img :src="pokemon.ballImage" class="pokeball-icon" alt="Pokeball Icon" />
+              <span class="pokemon-number">{{ pokemon.number }}</span>
+            </div>
+            <span class="pokemon-name">{{ pokemon.name }}</span>
           </div>
-          <span class="pokemon-name">{{ pokemon.name }}</span>
-        </div>
-        <router-link :to="`/pokemon/${pokemon.id}`">
-          <img :src="pokemon.image" alt="ポケモンの画像" class="pokemon-image" />
+          <div class="pokemon-image-wrapper">
+            <img :src="pokemon.image" alt="ポケモンの画像" class="pokemon-image" />
+          </div>
         </router-link>
       </li>
     </ul>
@@ -63,10 +66,10 @@ onMounted(async () => {
   flex-direction: column;
   align-items: center;
   width: 150px;
-  border-radius: 10px; /* カードの角丸 */
+  border-radius: 10px;
   overflow: hidden;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* 影を追加 */
-  background-color: #f3f4f6; /* カード背景色 */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  background-color: #f3f4f6;
   transition: transform 0.2s;
   text-align: center;
 }
@@ -76,10 +79,10 @@ onMounted(async () => {
 }
 
 .pokemon-header {
-  background-color: #d1e7f8; /* ヘッダー部分の背景色 */
+  background-color: #d1e7f8;
   width: 100%;
   padding: 10px 0;
-  color: #333; /* テキスト色 */
+  color: #333;
   font-weight: bold;
   display: flex;
   flex-direction: column;
@@ -90,6 +93,12 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   margin-bottom: 5px;
+  text-decoration: none; /* リンク下線を削除 */
+  color: inherit;
+}
+
+.pokemon-info:hover {
+  color: #00796b;
 }
 
 .pokeball-icon {
@@ -108,13 +117,27 @@ onMounted(async () => {
   font-size: 16px;
   font-weight: bold;
   color: #00796b;
+  text-decoration: none; /* リンク下線を削除 */
+}
+
+.pokemon-image-wrapper {
+  position: relative;
+  width: 100px;
+  height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-image: url('/pokeball-bg.png');
+  background-size: 80%;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
 .pokemon-image {
-  width: 100px;
-  height: 100px;
-  padding: 10px;
+  position: relative;
+  width: 80px;
+  height: 80px;
+  z-index: 1;
 }
 </style>
-
 
