@@ -132,22 +132,23 @@ export default async function handler(
       const katakanaQueryLower = hiraganaToKatakana(originalQueryLower);
 
       pokemonsToProcess = allPokemonData.results.filter((pokemon) => {
-        const pokemonNameLower = pokemon.name.toLowerCase(); // PokeAPIのnameはローマ字
-        const nameMatch =
-          pokemonNameLower.includes(originalQueryLower) ||
-          pokemonNameLower.includes(katakanaQueryLower);
+        // const pokemonNameLower = pokemon.name.toLowerCase(); // これは後続の nameBasedMatch で使われる
+        // 下記の古い nameMatch と idMatch の定義は削除
+        // const nameMatch =
+        //   pokemonNameLower.includes(originalQueryLower) ||
+        //   pokemonNameLower.includes(katakanaQueryLower);
 
-        // ID (URLから抽出) での検索も考慮 (searchTermが数値の場合)
-        let idMatch = false;
-        const searchId = originalQueryLower.match(/^\\d+$/)
-          ? originalQueryLower
-          : null; // searchTermが数字のみか
-        if (searchId) {
-          const pokemonIdFromUrl = pokemon.url.split("/").filter(Boolean).pop();
-          if (pokemonIdFromUrl === searchId) {
-            idMatch = true;
-          }
-        }
+        // let idMatch = false;
+        // const searchId = originalQueryLower.match(/^\\d+$/)
+        //   ? originalQueryLower
+        //   : null;
+        // if (searchId) {
+        //   const pokemonIdFromUrl = pokemon.url.split("/").filter(Boolean).pop();
+        //   if (pokemonIdFromUrl === searchId) {
+        //     idMatch = true;
+        //   }
+        // }
+
         // 注意: PokeAPIのリストのnameはローマ字。日本語名での検索は、全件の詳細情報を取得しないと不可。
         // ここでは、ローマ字名と、ユーザーが入力した日本語（のカタカナ変換版）での部分一致、およびIDでの一致を試みる。
         // より高度な日本語名検索は、全件日本語名リストを別途持つか、詳細取得後のフィルタリングが必要。
