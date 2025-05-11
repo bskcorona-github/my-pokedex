@@ -1,36 +1,33 @@
 <template>
-  <div>
-    <h1>ポケモン図鑑</h1>
+  <div class="container">
+    <header class="page-header">
+      <h1>ポケモン図鑑</h1>
+    </header>
 
     <div v-if="isLoading" class="loading-indicator">読み込み中...</div>
 
-    <ul class="pokemon-list">
-      <li v-for="pokemon in pokemons" :key="pokemon.id" class="pokemon-card">
-        <div class="pokemon-header">
-          <div class="pokemon-info">
-            <img
-              :src="pokemon.ballImage"
-              class="pokeball-icon"
-              alt="Pokeball Icon"
-            />
-            <router-link :to="`/pokemon/${pokemon.id}`" class="pokemon-link">
-              <span class="pokemon-number">{{ pokemon.number }}</span>
-            </router-link>
-          </div>
-          <router-link :to="`/pokemon/${pokemon.id}`" class="pokemon-link">
-            <span class="pokemon-name">{{ pokemon.name }}</span>
-          </router-link>
-        </div>
+    <div v-if="!isLoading && pokemons.length > 0" class="pokemon-grid">
+      <div v-for="pokemon in pokemons" :key="pokemon.id" class="pokemon-card">
         <router-link :to="`/pokemon/${pokemon.id}`" class="pokemon-link">
-          <img
-            :src="pokemon.image"
-            alt="ポケモンの画像"
-            class="pokemon-image"
-            loading="lazy"
-          />
+          <div class="pokemon-image-wrapper">
+            <img
+              :src="pokemon.image || '/pokeball.png'"
+              :alt="pokemon.name"
+              class="pokemon-image"
+              loading="lazy"
+            />
+          </div>
+          <div class="pokemon-info">
+            <p class="pokemon-number">{{ pokemon.number }}</p>
+            <h3 class="pokemon-name">{{ pokemon.name }}</h3>
+            <!-- タイプ表示は将来的に実装 -->
+            <!-- <div class="pokemon-types">
+              <span v-for="type in pokemon.types" :key="type" class="type-tag">{{ type }}</span>
+            </div> -->
+          </div>
         </router-link>
-      </li>
-    </ul>
+      </div>
+    </div>
 
     <div class="pagination-controls" v-if="totalPages > 0 && !isLoading">
       <button @click="goToFirstPage" :disabled="currentPage === 1">
@@ -50,10 +47,14 @@
         最後へ
       </button>
     </div>
+
     <div
-      v-if="!isLoading && pokemons.length === 0 && totalItems === 0"
+      v-if="!isLoading && pokemons.length === 0 && totalItems > 0"
       class="no-pokemon"
     >
+      このページにポケモンがいません。
+    </div>
+    <div v-if="!isLoading && totalItems === 0" class="no-pokemon">
       表示できるポケモンがいません。
     </div>
   </div>
@@ -61,19 +62,16 @@
 
 <script setup lang="ts">
 import { ref, onMounted, watch } from "vue";
-// import { useNuxtApp } from "#app"; // $axios を使わないのでコメントアウトまたは削除
-import { useRuntimeConfig } from "#app"; // 必要に応じてこちらを有効化
+import { useRuntimeConfig } from "#app";
 
 interface Pokemon {
   id: string;
   name: string;
-  // url: string; // urlはAPIレスポンスに依存しなくなったので削除または任意に
   image?: string;
-  ballImage?: string;
   number?: string;
+  // types?: string[]; // 将来的に追加
 }
 
-// APIレスポンスの型 (バックエンドに合わせたもの)
 interface PokemonApiResponse {
   results: Pokemon[];
   currentPage: number;
@@ -85,11 +83,11 @@ const pokemons = ref<Pokemon[]>([]);
 const currentPage = ref(1);
 const totalPages = ref(0);
 const totalItems = ref(0);
-const itemsPerPage = ref(20); // 1ページあたりのアイテム数 (バックエンドのデフォルトと合わせる)
+const itemsPerPage = ref(20);
 const isLoading = ref(false);
 
-const config = useRuntimeConfig(); // この行を復活
-const apiBaseUrl = config.public.apiBase; // この行を復活
+const config = useRuntimeConfig();
+const apiBaseUrl = config.public.apiBase;
 
 const SESSION_STORAGE_KEY = "pokedexCurrentPage";
 
@@ -106,22 +104,16 @@ const fetchPokemons = async (page: number) => {
         },
       }
     );
-    pokemons.value = responseData.results.map((p) => ({
-      ...p,
-      ballImage: "/pokeball.png", // ballImage はフロントエンドで固定値を設定
-    }));
+    // image が null や undefined の場合にフォールバック画像を設定する処理はテンプレート側に移動
+    pokemons.value = responseData.results;
     currentPage.value = responseData.currentPage;
     totalPages.value = responseData.totalPages;
     totalItems.value = responseData.totalItems;
-
-    console.log("API Response Data:", responseData);
-    console.log("Set totalPages to:", totalPages.value);
-    console.log("Set totalItems to:", totalItems.value);
   } catch (error) {
     console.error("Error fetching pokemons:", error);
+    pokemons.value = []; // エラー時は空にする
     totalPages.value = 0;
     totalItems.value = 0;
-    // エラーハンドリング (例: ユーザーへの通知)
   } finally {
     isLoading.value = false;
   }
@@ -138,178 +130,218 @@ onMounted(() => {
   fetchPokemons(currentPage.value);
 });
 
-watch(currentPage, (newPage) => {
+watch(currentPage, (newPage, oldPage) => {
   if (newPage > 0) {
     sessionStorage.setItem(SESSION_STORAGE_KEY, String(newPage));
   }
-  fetchPokemons(newPage);
+  // ページ番号が実際に変更された場合のみデータを再取得
+  if (newPage !== oldPage) {
+    fetchPokemons(newPage);
+  }
 });
 
-watch(
-  currentPage,
-  (newPage, oldPage) => {
-    if (newPage !== oldPage || pokemons.value.length === 0) {
-      fetchPokemons(newPage);
-    }
-  },
-  { immediate: false }
-);
-
+// goTo 系関数は変更なし
 const goToFirstPage = () => {
-  if (currentPage.value > 1) {
-    currentPage.value = 1;
-  }
+  if (currentPage.value > 1) currentPage.value = 1;
 };
-
 const goToPreviousPage = () => {
-  if (currentPage.value > 1) {
-    currentPage.value--;
-  }
+  if (currentPage.value > 1) currentPage.value--;
 };
-
 const goToNextPage = () => {
-  if (currentPage.value < totalPages.value) {
-    currentPage.value++;
-  }
+  if (currentPage.value < totalPages.value) currentPage.value++;
 };
-
 const goToLastPage = () => {
-  if (currentPage.value < totalPages.value) {
+  if (currentPage.value < totalPages.value)
     currentPage.value = totalPages.value;
-  }
 };
 </script>
+
 <style scoped>
-body {
-  background-color: #e0f7fa;
-  margin: 0;
-  padding: 0;
-  font-family: Arial, sans-serif;
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  background-color: #f9f9f9;
+  min-height: 100vh;
 }
 
-.pokemon-list {
+.page-header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.page-header h1 {
+  font-size: 2.8em;
+  color: #333;
+  font-weight: bold;
+}
+
+.loading-indicator,
+.no-pokemon {
+  text-align: center;
+  padding: 40px;
+  font-size: 1.2em;
+  color: #777;
+}
+
+.pokemon-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 20px;
-  list-style-type: none;
-  padding: 0;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 25px;
+  margin-bottom: 30px;
 }
 
 .pokemon-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 150px;
-  border-radius: 10px;
+  background-color: #fff;
+  border-radius: 12px;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.08);
   overflow: hidden;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  background-color: #f3f4f6;
-  transition: transform 0.2s;
-  text-align: center;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  cursor: pointer;
 }
 
 .pokemon-card:hover {
-  transform: scale(1.05);
+  transform: translateY(-5px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
 }
 
 .pokemon-link {
-  display: block;
   text-decoration: none;
   color: inherit;
-}
-
-.pokemon-header {
-  background-color: #a4d0e7; /* ヘッダーの色を少し濃く変更 */
-  width: 100%;
-  padding: 10px 0;
-  color: #333;
-  font-weight: bold;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  height: 100%; /* カード全体をリンクにするために高さを100%に */
 }
 
-.pokemon-info {
+.pokemon-image-wrapper {
+  background-color: #f3f4f6; /* 薄いグレーの背景 */
+  padding: 20px;
   display: flex;
+  justify-content: center;
   align-items: center;
-  margin-bottom: 5px;
-  text-decoration: none; /* 下線を消す */
-}
-
-.pokeball-icon {
-  width: 20px;
-  height: 20px;
-  margin-right: 5px;
-  background-color: #a4d0e7; /* ヘッダー部分と同じ背景色 */
-  border-radius: 50%; /* 円形の背景を適用 */
-  padding: 2px; /* モンスターボールの画像周りに余白を追加 */
-}
-
-.pokemon-number {
-  font-size: 12px;
-  font-weight: bold;
-  color: #fff; /* 白文字に変更 */
-}
-
-.pokemon-name {
-  font-size: 16px;
-  font-weight: bold;
-  color: #00796b;
-  text-decoration: none; /* 下線を消す */
+  aspect-ratio: 1 / 1; /* 画像コンテナを正方形に */
 }
 
 .pokemon-image {
-  width: 100px;
-  height: 100px;
-  padding: 10px;
+  max-width: 90%;
+  max-height: 90%;
+  object-fit: contain;
 }
+
+.pokemon-info {
+  padding: 15px;
+  text-align: center;
+  flex-grow: 1; /* 画像以外の残りのスペースを埋める */
+  display: flex;
+  flex-direction: column;
+  justify-content: center; /* 内容を中央揃え（垂直方向）*/
+}
+
+.pokemon-number {
+  font-size: 0.85em;
+  color: #888;
+  margin-bottom: 4px;
+}
+
+.pokemon-name {
+  font-size: 1.15em;
+  font-weight: bold;
+  color: #333;
+  margin: 0; /* デフォルトマージンをリセット */
+}
+
+/* タイプ表示用のスタイル (将来用) */
+/*
+.pokemon-types {
+  margin-top: 8px;
+}
+.type-tag {
+  display: inline-block;
+  padding: 3px 8px;
+  margin: 2px;
+  border-radius: 4px;
+  font-size: 0.75em;
+  color: white;
+  text-transform: capitalize;
+}
+*/
 
 .pagination-controls {
   display: flex;
   justify-content: center;
   align-items: center;
-  margin-top: 20px;
-  margin-bottom: 20px;
+  margin-top: 30px;
+  padding: 20px 0;
 }
 
 .pagination-controls button {
-  background-color: #4caf50;
+  background-color: #007aff; /* 主要なアクションボタンの色 */
   color: white;
   border: none;
   padding: 10px 20px;
   text-align: center;
   text-decoration: none;
   display: inline-block;
-  font-size: 16px;
-  margin: 4px 8px;
+  font-size: 1em;
+  margin: 0 8px;
   cursor: pointer;
-  border-radius: 5px;
-  transition: background-color 0.3s;
+  border-radius: 8px;
+  transition: background-color 0.2s ease;
 }
 
 .pagination-controls button:disabled {
-  background-color: #cccccc;
+  background-color: #e0e0e0; /* 無効化されたボタンの色 */
+  color: #a0a0a0;
   cursor: not-allowed;
 }
 
 .pagination-controls button:hover:not(:disabled) {
-  background-color: #45a049;
+  background-color: #0056b3; /* ホバー時の色 */
 }
 
 .pagination-controls span {
   margin: 0 15px;
-  font-size: 16px;
+  font-size: 1em;
+  color: #555;
 }
 
-.loading-indicator {
-  text-align: center;
-  padding: 20px;
-  font-size: 18px;
+/* レスポンシブ対応: 画面幅が狭い場合 (例: 600px以下) */
+@media (max-width: 600px) {
+  .pokemon-grid {
+    grid-template-columns: repeat(
+      auto-fill,
+      minmax(150px, 1fr)
+    ); /* モバイルではカード幅を少し小さく */
+    gap: 15px;
+  }
+  .page-header h1 {
+    font-size: 2em;
+  }
+  .pokemon-card {
+    border-radius: 10px;
+  }
+  .pokemon-info {
+    padding: 10px;
+  }
+  .pokemon-name {
+    font-size: 1em;
+  }
+  .pagination-controls button {
+    padding: 8px 12px;
+    font-size: 0.9em;
+    margin: 0 4px;
+  }
+  .pagination-controls span {
+    font-size: 0.9em;
+    margin: 0 8px;
+  }
 }
-.no-pokemon {
-  text-align: center;
-  padding: 20px;
-  font-size: 18px;
-  color: #777;
+
+@media (max-width: 400px) {
+  .pokemon-grid {
+    /* さらに小さい画面では1列にすることも検討できますが、auto-fill でもある程度対応できます */
+    /* grid-template-columns: 1fr; */
+  }
 }
 </style>
