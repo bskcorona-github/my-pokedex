@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 // import fetch from "node-fetch"; // Node.js v18未満の場合。v18+ならネイティブ fetch を検討 (削除)
 // import NodeCache from "node-cache";
-// import pLimit from "p-limit";
+import pLimit from "p-limit";
 
 const pLimitInstance = pLimit(5); // 変数名を pLimit から変更（pLimit が型名と衝突するため）
 // const cache = new NodeCache({ stdTTL: 3600 }); // キャッシュを1時間保持 ← この行をコメントアウト
