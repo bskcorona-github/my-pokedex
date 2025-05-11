@@ -7,23 +7,16 @@
     <div class="search-filter-container">
       <input
         type="text"
-        v-model.trim="searchQuery"
-        placeholder="名前 または 図鑑番号で検索 (例: フシギダネ, 001)"
+        v-model.trim="searchQueryInput"
+        placeholder="名前(ローマ字推奨) または 図鑑番号で検索"
         class="search-input"
       />
     </div>
-    <p class="search-annotation">
-      ※ 現在表示されているページのポケモンから検索します。
-    </p>
 
     <div v-if="isLoading" class="loading-indicator">読み込み中...</div>
 
-    <div v-if="!isLoading && filteredPokemons.length > 0" class="pokemon-grid">
-      <div
-        v-for="pokemon in filteredPokemons"
-        :key="pokemon.id"
-        class="pokemon-card"
-      >
+    <div v-if="!isLoading && pokemons.length > 0" class="pokemon-grid">
+      <div v-for="pokemon in pokemons" :key="pokemon.id" class="pokemon-card">
         <router-link :to="`/pokemon/${pokemon.id}`" class="pokemon-link">
           <div class="pokemon-image-wrapper">
             <img
@@ -74,21 +67,15 @@
     </div>
 
     <div
-      v-if="!isLoading && pokemons.length === 0 && totalItems > 0"
-      class="no-pokemon"
-    >
-      このページにポケモンがいません。
-    </div>
-    <div
       v-if="
         !isLoading &&
-        filteredPokemons.length === 0 &&
-        pokemons.length > 0 &&
-        searchQuery
+        pokemons.length === 0 &&
+        totalItems > 0 &&
+        searchQueryInternal
       "
       class="no-pokemon"
     >
-      「{{ searchQuery }}」に一致するポケモンは見つかりませんでした。
+      「{{ searchQueryInternal }}」に一致するポケモンは見つかりませんでした。
     </div>
     <div v-if="!isLoading && totalItems === 0" class="no-pokemon">
       表示できるポケモンがいません。
@@ -121,31 +108,44 @@ const totalPages = ref(0);
 const totalItems = ref(0);
 const itemsPerPage = ref(20);
 const isLoading = ref(false);
-const searchQuery = ref("");
+const searchQueryInput = ref(""); // ユーザー入力用
+const searchQueryInternal = ref(""); // APIリクエスト用 (debounce後にセット)
 
 const config = useRuntimeConfig();
 const apiBaseUrl = config.public.apiBase;
 
 const SESSION_STORAGE_KEY = "pokedexCurrentPage";
 
-const fetchPokemons = async (page: number) => {
+const fetchPokemons = async (page: number, searchTerm?: string) => {
   if (isLoading.value) return;
   isLoading.value = true;
   try {
+    const params: any = {
+      page: page,
+      limit: itemsPerPage.value,
+    };
+    if (searchTerm) {
+      params.searchTerm = searchTerm;
+    }
     const responseData = await $fetch<PokemonApiResponse>(
       `${apiBaseUrl}/pokemon`,
       {
-        params: {
-          page: page,
-          limit: itemsPerPage.value,
-        },
+        params: params,
       }
     );
-    // image が null や undefined の場合にフォールバック画像を設定する処理はテンプレート側に移動
     pokemons.value = responseData.results;
     currentPage.value = responseData.currentPage;
     totalPages.value = responseData.totalPages;
     totalItems.value = responseData.totalItems;
+
+    // 検索結果がない場合、totalPagesが0になることがあるので、その場合はcurrentPageも調整する
+    if (
+      responseData.totalPages === 0 &&
+      responseData.totalItems === 0 &&
+      searchTerm
+    ) {
+      currentPage.value = 1; // 検索結果0件なら1ページ目とする
+    }
   } catch (error) {
     console.error("Error fetching pokemons:", error);
     pokemons.value = []; // エラー時は空にする
@@ -156,43 +156,41 @@ const fetchPokemons = async (page: number) => {
   }
 };
 
-const hiraganaToKatakana = (str: string): string => {
-  return str.replace(/[ぁ-ゔゞ゛゜]/g, function (match) {
-    const charCode = match.charCodeAt(0) + 0x60;
-    return String.fromCharCode(charCode);
-  });
-};
+// Debounce用のタイマーID
+let debounceTimer: NodeJS.Timeout | null = null;
 
-// フィルタリングされたポケモンリスト
-const filteredPokemons = computed(() => {
-  if (!searchQuery.value) {
-    return pokemons.value; // 検索クエリがなければ元のリストを返す
+watch(searchQueryInput, (newQuery) => {
+  if (debounceTimer) {
+    clearTimeout(debounceTimer);
   }
-  const originalQuery = searchQuery.value.toLowerCase();
-  const katakanaQuery = hiraganaToKatakana(originalQuery);
+  debounceTimer = setTimeout(() => {
+    searchQueryInternal.value = newQuery; // debounce後にAPIリクエスト用のクエリを更新
+    // currentPage.value = 1; // 検索時は1ページ目から表示 - fetchPokemonsで対応
+    fetchPokemons(1, newQuery); // 検索クエリが変更されたら1ページ目を取得
+  }, 500); // 500msのデバウンス
+});
 
-  return pokemons.value.filter((pokemon) => {
-    const pokemonNameLower = pokemon.name.toLowerCase();
-
-    // 名前検索: 元のクエリ(小文字)とカタカナ変換後のクエリ(小文字)の両方でポケモン名(小文字)と比較
-    const nameMatch =
-      pokemonNameLower.includes(originalQuery) ||
-      pokemonNameLower.includes(katakanaQuery);
-
-    // 図鑑番号検索: "No.xxx" から "xxx" を抽出し、検索クエリも数値化して比較
-    let numberMatch = false;
-    if (pokemon.number) {
-      const pokemonNumberSanitized = pokemon.number.replace(/^No\.?0*/, ""); // "001" や "1" にする
-      const queryAsNumber = originalQuery
-        .replace(/^No\.?0*/, "")
-        .replace(/[^0-9]/g, ""); // クエリから数字のみ抽出
-      if (queryAsNumber) {
-        // 数字クエリがある場合のみ番号検索
-        numberMatch = pokemonNumberSanitized.includes(queryAsNumber);
-      }
-    }
-    return nameMatch || numberMatch;
-  });
+watch(currentPage, (newPage, oldPage) => {
+  if (newPage > 0) {
+    sessionStorage.setItem(SESSION_STORAGE_KEY, String(newPage));
+  }
+  // ページ変更時は、現在の検索クエリを維持してデータを取得
+  // ただし、検索クエリ入力による fetchPokemons(1, newQuery) との二重呼び出しを避ける工夫が必要な場合がある
+  // searchQueryInternal の変更時にも fetch が走るので、ページ変更「のみ」の場合に fetch する
+  if (
+    newPage !== oldPage &&
+    !searchQueryInput.value &&
+    !searchQueryInternal.value
+  ) {
+    // 検索中でない場合のみ
+    fetchPokemons(newPage);
+  } else if (
+    newPage !== oldPage &&
+    (searchQueryInput.value || searchQueryInternal.value)
+  ) {
+    // 検索中のページ変更
+    fetchPokemons(newPage, searchQueryInternal.value);
+  }
 });
 
 const getDisplayTypes = (pokemon: Pokemon): string[] => {
@@ -213,16 +211,6 @@ onMounted(() => {
     }
   }
   fetchPokemons(currentPage.value);
-});
-
-watch(currentPage, (newPage, oldPage) => {
-  if (newPage > 0) {
-    sessionStorage.setItem(SESSION_STORAGE_KEY, String(newPage));
-  }
-  // ページ番号が実際に変更された場合のみデータを再取得
-  if (newPage !== oldPage) {
-    fetchPokemons(newPage);
-  }
 });
 
 // goTo 系関数は変更なし
