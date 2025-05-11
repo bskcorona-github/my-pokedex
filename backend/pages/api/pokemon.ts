@@ -123,14 +123,15 @@ export default async function handler(
 
     const pokemonDetailsPromises = listData.results.map((pokemon) =>
       pLimitInstance(async (): Promise<PokemonDetail | null> => {
-        // null を返す可能性を明示
         const id = pokemon.url.split("/").filter(Boolean).pop();
+        console.log(`Processing ID from URL ${pokemon.url}: ${id}`);
         if (!id) {
           console.error(`Could not extract ID from URL: ${pokemon.url}`);
           return null; // IDがなければ処理中断
         }
 
         try {
+          console.log(`Fetching pokemon data for ID: ${id}`);
           const pokemonResponse = await fetch(
             `https://pokeapi.co/api/v2/pokemon/${id}`
           );
@@ -142,7 +143,13 @@ export default async function handler(
           }
           const pokemonData =
             (await pokemonResponse.json()) as ExternalPokemonData;
+          console.log(
+            `Fetched pokemonData for ${id}:`,
+            pokemonData.name,
+            pokemonData.sprites?.front_default
+          );
 
+          console.log(`Fetching species data for ID: ${id}`);
           const speciesResponse = await fetch(
             `https://pokeapi.co/api/v2/pokemon-species/${id}`
           );
@@ -150,26 +157,37 @@ export default async function handler(
             console.error(
               `Failed to fetch species ${id}: ${speciesResponse.status} ${speciesResponse.statusText}`
             );
+            // 種族データがなくてもポケモン名でフォールバックするので、null を返さずに続行も検討できるが、一旦現状維持
             return null; // 種族データの取得失敗
           }
           const speciesData =
             (await speciesResponse.json()) as ExternalSpeciesData;
+          // console.log(`Fetched speciesData for ${id}:`, JSON.stringify(speciesData.names, null, 2)); // ★必要に応じて詳細ログ
 
           const japaneseNameEntry = speciesData.names.find(
             (entry) =>
               entry.language.name === "ja-Hrkt" || entry.language.name === "ja"
           );
           const japaneseName = japaneseNameEntry?.name || pokemonData.name;
+          console.log(`Determined name for ${id}: ${japaneseName}`);
 
-          return {
+          const image =
+            pokemonData.sprites.other?.["official-artwork"]?.front_default ||
+            pokemonData.sprites.front_default ||
+            "/pokeball.png";
+          console.log(`Determined image for ${id}: ${image}`);
+
+          const resultPokemonDetail: PokemonDetail = {
             id,
             name: japaneseName,
-            image:
-              pokemonData.sprites.other?.["official-artwork"]?.front_default ||
-              pokemonData.sprites.front_default ||
-              "/pokeball.png",
+            image: image,
             number: `No.${String(id).padStart(3, "0")}`,
           };
+          console.log(
+            `Successfully processed pokemon ID ${id}:`,
+            JSON.stringify(resultPokemonDetail)
+          );
+          return resultPokemonDetail;
         } catch (detailError) {
           console.error(
             `Error processing details for pokemon ID ${id}:`,
