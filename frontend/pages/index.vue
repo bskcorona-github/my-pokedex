@@ -4,10 +4,23 @@
       <h1>ポケモン図鑑</h1>
     </header>
 
+    <div class="search-filter-container">
+      <input
+        type="text"
+        v-model.trim="searchQuery"
+        placeholder="名前 または 図鑑番号で検索 (例: フシギダネ, 001)"
+        class="search-input"
+      />
+    </div>
+
     <div v-if="isLoading" class="loading-indicator">読み込み中...</div>
 
-    <div v-if="!isLoading && pokemons.length > 0" class="pokemon-grid">
-      <div v-for="pokemon in pokemons" :key="pokemon.id" class="pokemon-card">
+    <div v-if="!isLoading && filteredPokemons.length > 0" class="pokemon-grid">
+      <div
+        v-for="pokemon in filteredPokemons"
+        :key="pokemon.id"
+        class="pokemon-card"
+      >
         <router-link :to="`/pokemon/${pokemon.id}`" class="pokemon-link">
           <div class="pokemon-image-wrapper">
             <img
@@ -63,6 +76,17 @@
     >
       このページにポケモンがいません。
     </div>
+    <div
+      v-if="
+        !isLoading &&
+        filteredPokemons.length === 0 &&
+        pokemons.length > 0 &&
+        searchQuery
+      "
+      class="no-pokemon"
+    >
+      「{{ searchQuery }}」に一致するポケモンは見つかりませんでした。
+    </div>
     <div v-if="!isLoading && totalItems === 0" class="no-pokemon">
       表示できるポケモンがいません。
     </div>
@@ -70,7 +94,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from "vue";
+import { ref, onMounted, watch, computed } from "vue";
 import { useRuntimeConfig } from "#app";
 
 interface Pokemon {
@@ -94,6 +118,7 @@ const totalPages = ref(0);
 const totalItems = ref(0);
 const itemsPerPage = ref(20);
 const isLoading = ref(false);
+const searchQuery = ref("");
 
 const config = useRuntimeConfig();
 const apiBaseUrl = config.public.apiBase;
@@ -127,6 +152,24 @@ const fetchPokemons = async (page: number) => {
     isLoading.value = false;
   }
 };
+
+// フィルタリングされたポケモンリスト
+const filteredPokemons = computed(() => {
+  if (!searchQuery.value) {
+    return pokemons.value; // 検索クエリがなければ元のリストを返す
+  }
+  const query = searchQuery.value.toLowerCase();
+  return pokemons.value.filter((pokemon) => {
+    const nameMatch = pokemon.name.toLowerCase().includes(query);
+    // 図鑑番号は "No.001" のような形式なので、数値部分のみを抽出して比較
+    const numberMatch = pokemon.number
+      ? pokemon.number
+          .replace(/^No\.?0*/, "")
+          .includes(query.replace(/^0*/, ""))
+      : false;
+    return nameMatch || numberMatch;
+  });
+});
 
 onMounted(() => {
   const savedPage = sessionStorage.getItem(SESSION_STORAGE_KEY);
@@ -185,6 +228,30 @@ const goToLastPage = () => {
   color: #3a5da9;
   font-weight: 700;
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.search-filter-container {
+  margin-bottom: 25px;
+  display: flex;
+  justify-content: center;
+}
+
+.search-input {
+  width: 100%;
+  max-width: 500px;
+  padding: 12px 20px;
+  font-size: 1em;
+  border: 1px solid #ddd;
+  border-radius: 25px;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.06);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #fdd835;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.06),
+    0 0 0 3px rgba(253, 216, 53, 0.3);
 }
 
 .loading-indicator,
