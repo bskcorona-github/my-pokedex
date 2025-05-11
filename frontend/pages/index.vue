@@ -91,6 +91,8 @@ const isLoading = ref(false);
 const config = useRuntimeConfig(); // この行を復活
 const apiBaseUrl = config.public.apiBase; // この行を復活
 
+const SESSION_STORAGE_KEY = "pokedexCurrentPage";
+
 const fetchPokemons = async (page: number) => {
   if (isLoading.value) return;
   isLoading.value = true;
@@ -126,12 +128,32 @@ const fetchPokemons = async (page: number) => {
 };
 
 onMounted(() => {
+  const savedPage = sessionStorage.getItem(SESSION_STORAGE_KEY);
+  if (savedPage) {
+    const pageNumber = parseInt(savedPage, 10);
+    if (!isNaN(pageNumber) && pageNumber > 0) {
+      currentPage.value = pageNumber;
+    }
+  }
   fetchPokemons(currentPage.value);
 });
 
 watch(currentPage, (newPage) => {
+  if (newPage > 0) {
+    sessionStorage.setItem(SESSION_STORAGE_KEY, String(newPage));
+  }
   fetchPokemons(newPage);
 });
+
+watch(
+  currentPage,
+  (newPage, oldPage) => {
+    if (newPage !== oldPage || pokemons.value.length === 0) {
+      fetchPokemons(newPage);
+    }
+  },
+  { immediate: false }
+);
 
 const goToFirstPage = () => {
   if (currentPage.value > 1) {
