@@ -1,61 +1,142 @@
 <template>
   <div>
     <h1>ポケモン図鑑</h1>
+
+    <div v-if="isLoading" class="loading-indicator">読み込み中...</div>
+
     <ul class="pokemon-list">
       <li v-for="pokemon in pokemons" :key="pokemon.id" class="pokemon-card">
         <div class="pokemon-header">
           <div class="pokemon-info">
-            <img :src="pokemon.ballImage" class="pokeball-icon" alt="Pokeball Icon" />
+            <img
+              :src="pokemon.ballImage"
+              class="pokeball-icon"
+              alt="Pokeball Icon"
+            />
             <router-link :to="`/pokemon/${pokemon.id}`" class="pokemon-link">
-            <span class="pokemon-number">{{ pokemon.number }}</span>
-        </router-link>
+              <span class="pokemon-number">{{ pokemon.number }}</span>
+            </router-link>
           </div>
           <router-link :to="`/pokemon/${pokemon.id}`" class="pokemon-link">
-          <span class="pokemon-name">{{ pokemon.name }}</span>
-        </router-link>
+            <span class="pokemon-name">{{ pokemon.name }}</span>
+          </router-link>
         </div>
         <router-link :to="`/pokemon/${pokemon.id}`" class="pokemon-link">
-          <img :src="pokemon.image" alt="ポケモンの画像" class="pokemon-image" />
+          <img
+            :src="pokemon.image"
+            alt="ポケモンの画像"
+            class="pokemon-image"
+            loading="lazy"
+          />
         </router-link>
       </li>
     </ul>
+
+    <div class="pagination-controls" v-if="totalPages > 0 && !isLoading">
+      <button @click="goToPreviousPage" :disabled="currentPage === 1">
+        前へ
+      </button>
+      <span
+        >ページ {{ currentPage }} / {{ totalPages }} (全
+        {{ totalItems }} 匹)</span
+      >
+      <button @click="goToNextPage" :disabled="currentPage === totalPages">
+        次へ
+      </button>
+    </div>
+    <div
+      v-if="!isLoading && pokemons.length === 0 && totalItems === 0"
+      class="no-pokemon"
+    >
+      表示できるポケモンがいません。
+    </div>
   </div>
 </template>
 
-
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useNuxtApp } from '#app'
+import { ref, onMounted, watch, useRuntimeConfig } from "vue";
+// import { useNuxtApp } from "#app"; // $axios を使わないのでコメントアウトまたは削除
 
 interface Pokemon {
   id: string;
   name: string;
-  url: string;
+  // url: string; // urlはAPIレスポンスに依存しなくなったので削除または任意に
   image?: string;
-  ballImage?: string; // モンスターボールの画像URL
-  number?: string;     // ポケモンの番号
+  ballImage?: string;
+  number?: string;
 }
 
-const pokemons = ref<Pokemon[]>([])
-const { $axios } = useNuxtApp()
+// APIレスポンスの型 (バックエンドに合わせたもの)
+interface PokemonApiResponse {
+  results: Pokemon[];
+  currentPage: number;
+  totalPages: number;
+  totalItems: number;
+}
 
-onMounted(async () => {
-  const response = await $axios.get('/pokemon')
-  const results = response.data.results
+const pokemons = ref<Pokemon[]>([]);
+const currentPage = ref(1);
+const totalPages = ref(0);
+const totalItems = ref(0);
+const itemsPerPage = ref(20); // 1ページあたりのアイテム数 (バックエンドのデフォルトと合わせる)
+const isLoading = ref(false);
 
-  pokemons.value = results.map((pokemon: any) => ({
-    id: pokemon.id,
-    name: pokemon.name,
-    url: pokemon.url,
-    image: pokemon.image,
-    ballImage: '/pokeball.png',   // モンスターボール画像のURL
-    number: pokemon.number          // ポケモンの番号
-  }))
-})
+const config = useRuntimeConfig();
+const apiBaseUrl = config.public.apiBase;
+
+// const { $axios } = useNuxtApp(); // 不要なのでコメントアウトまたは削除
+
+const fetchPokemons = async (page: number) => {
+  if (isLoading.value) return;
+  isLoading.value = true;
+  try {
+    const responseData = await $fetch<PokemonApiResponse>(
+      `${apiBaseUrl}/pokemon`,
+      {
+        params: {
+          page: page,
+          limit: itemsPerPage.value,
+        },
+      }
+    );
+    pokemons.value = responseData.results.map((p) => ({
+      ...p,
+      ballImage: "/pokeball.png", // ballImage はフロントエンドで固定値を設定
+    }));
+    currentPage.value = responseData.currentPage;
+    totalPages.value = responseData.totalPages;
+    totalItems.value = responseData.totalItems;
+  } catch (error) {
+    console.error("Error fetching pokemons:", error);
+    // エラーハンドリング (例: ユーザーへの通知)
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+onMounted(() => {
+  fetchPokemons(currentPage.value);
+});
+
+watch(currentPage, (newPage) => {
+  fetchPokemons(newPage);
+});
+
+const goToPreviousPage = () => {
+  if (currentPage.value > 1) {
+    currentPage.value--;
+  }
+};
+
+const goToNextPage = () => {
+  if (currentPage.value < totalPages.value) {
+    currentPage.value++;
+  }
+};
 </script>
 <style scoped>
 body {
-  background-color: #e0f7fa; 
+  background-color: #e0f7fa;
   margin: 0;
   padding: 0;
   font-family: Arial, sans-serif;
@@ -137,6 +218,53 @@ body {
   height: 100px;
   padding: 10px;
 }
+
+.pagination-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 20px;
+  margin-bottom: 20px;
+}
+
+.pagination-controls button {
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 16px;
+  margin: 4px 8px;
+  cursor: pointer;
+  border-radius: 5px;
+  transition: background-color 0.3s;
+}
+
+.pagination-controls button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+.pagination-controls button:hover:not(:disabled) {
+  background-color: #45a049;
+}
+
+.pagination-controls span {
+  margin: 0 15px;
+  font-size: 16px;
+}
+
+.loading-indicator {
+  text-align: center;
+  padding: 20px;
+  font-size: 18px;
+}
+.no-pokemon {
+  text-align: center;
+  padding: 20px;
+  font-size: 18px;
+  color: #777;
+}
 </style>
-
-

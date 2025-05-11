@@ -10,12 +10,10 @@
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
-    "@nuxtjs/axios": "^5.13.6",
-    "@nuxtjs/vercel-builder": "^0.25.0",
     "axios": "^1.7.7",
     "nuxt": "^3.14.159",
-    "vue": "latest",
-    "vue-router": "latest"
+    "vue": "^3.4.0",
+    "vue-router": "^4.2.0"
   },
   "devDependencies": {
     "typescript": "^5.6.3"
