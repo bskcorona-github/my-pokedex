@@ -4,7 +4,7 @@ import NodeCache from "node-cache";
 import pLimit from "p-limit";
 
 const pLimitInstance = pLimit(5); // 変数名を pLimit から変更（pLimit が型名と衝突するため）
-const cache = new NodeCache({ stdTTL: 3600 }); // キャッシュを1時間保持
+// const cache = new NodeCache({ stdTTL: 3600 }); // キャッシュを1時間保持 ← この行をコメントアウト
 
 interface PokemonListItem {
   name: string;
