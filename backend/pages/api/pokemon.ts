@@ -30,10 +30,17 @@ interface ExternalPokemonData {
       };
     };
   };
+  types: { slot: number; type: { name: string; url: string } }[]; // 追加: タイプ情報
 }
 
 // 追加: ポケモン種族APIのレスポンス型
 interface ExternalSpeciesData {
+  names: { language: { name: string }; name: string }[];
+  // 他にも必要なフィールドがあれば追加
+}
+
+// 追加: ポケモンタイプAPIのレスポンス型
+interface ExternalTypeData {
   names: { language: { name: string }; name: string }[];
   // 他にも必要なフィールドがあれば追加
 }
@@ -43,6 +50,7 @@ interface PokemonDetail {
   name: string;
   image: string;
   number: string;
+  types?: string[]; // 追加: タイプ情報 (日本語名の配列)
 }
 
 interface ApiResponse {
@@ -177,11 +185,52 @@ export default async function handler(
             "/pokeball.png";
           console.log(`Determined image for ${id}: ${image}`);
 
+          // タイプ情報の取得と処理
+          const japaneseTypes: string[] = [];
+          if (pokemonData.types && pokemonData.types.length > 0) {
+            const typePromises = pokemonData.types.map(async (typeEntry) => {
+              try {
+                console.log(
+                  `Fetching type data from URL: ${typeEntry.type.url}`
+                );
+                const typeResponse = await fetch(typeEntry.type.url);
+                if (!typeResponse.ok) {
+                  console.error(
+                    `Failed to fetch type details for ${typeEntry.type.name}: ${typeResponse.status}`
+                  );
+                  return null; // タイプ詳細の取得失敗
+                }
+                const typeData =
+                  (await typeResponse.json()) as ExternalTypeData;
+                const japaneseTypeNameEntry = typeData.names.find(
+                  (nameEntry) =>
+                    nameEntry.language.name === "ja-Hrkt" ||
+                    nameEntry.language.name === "ja"
+                );
+                return japaneseTypeNameEntry?.name || typeEntry.type.name;
+              } catch (typeError) {
+                console.error(
+                  `Error fetching type details for ${typeEntry.type.name}:`,
+                  typeError
+                );
+                return typeEntry.type.name; // エラー時は英語名フォールバック
+              }
+            });
+            const resolvedTypes = await Promise.all(typePromises);
+            resolvedTypes.forEach((typeName) => {
+              if (typeName) japaneseTypes.push(typeName);
+            });
+          }
+          console.log(
+            `Determined types for ${id}: ${japaneseTypes.join(", ")}`
+          );
+
           const resultPokemonDetail: PokemonDetail = {
             id,
             name: japaneseName,
             image: image,
             number: `No.${String(id).padStart(3, "0")}`,
+            types: japaneseTypes, // タイプ情報を追加
           };
           console.log(
             `Successfully processed pokemon ID ${id}:`,
