@@ -6,8 +6,7 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   runtimeConfig: {
     public: {
-      apiBase:
-        process.env.API_BASE_URL || "https://my-pokedex-backend.vercel.app/api",
+      apiBase: process.env.API_BASE_URL || "http://localhost:3001/api",
     },
   },
 });

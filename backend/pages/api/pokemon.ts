@@ -68,7 +68,7 @@ export default async function handler(
   if (req.method === "OPTIONS") {
     res.setHeader(
       "Access-Control-Allow-Origin",
-      "https://my-pokedex-frontend.vercel.app"
+      "*" // すべてのオリジンを許可
     );
     res.setHeader(
       "Access-Control-Allow-Methods",
