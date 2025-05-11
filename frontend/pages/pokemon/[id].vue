@@ -4,7 +4,10 @@
     データの読み込みに失敗しました: {{ error.message }}
   </div>
   <div v-else-if="pokemon" class="pokemon-detail-container">
-    <h1>{{ pokemon.name }} ({{ pokemon.number }})</h1>
+    <h1>
+      {{ pokemon.name }}
+      <span v-if="pokemon.number">({{ pokemon.number }})</span>
+    </h1>
     <div class="pokemon-layout">
       <div class="pokemon-image-container">
         <img :src="pokemon.image" :alt="pokemon.name" class="pokemon-image" />

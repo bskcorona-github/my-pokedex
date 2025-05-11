@@ -12,6 +12,9 @@
         class="search-input"
       />
     </div>
+    <p class="search-annotation">
+      ※ 現在表示されているページのポケモンから検索します。
+    </p>
 
     <div v-if="isLoading" class="loading-indicator">読み込み中...</div>
 
@@ -35,14 +38,14 @@
             <h3 class="pokemon-name">{{ pokemon.name }}</h3>
             <!-- タイプ表示は将来的に実装 -->
             <div
-              v-if="pokemon.types && pokemon.types.length > 0"
+              v-if="getDisplayTypes(pokemon).length > 0"
               class="pokemon-types"
             >
               <span
-                v-for="typeText in pokemon.types"
-                :key="typeText"
+                v-for="(typeText, index) in getDisplayTypes(pokemon)"
+                :key="index"
                 class="type-tag"
-                :class="typeText ? 'type-' + typeText.toLowerCase() : ''"
+                :class="'type-' + typeText.toLowerCase()"
                 >{{ typeText }}</span
               >
             </div>
@@ -153,23 +156,53 @@ const fetchPokemons = async (page: number) => {
   }
 };
 
+const hiraganaToKatakana = (str: string): string => {
+  return str.replace(/[ぁ-ゔゞ゛゜]/g, function (match) {
+    const charCode = match.charCodeAt(0) + 0x60;
+    return String.fromCharCode(charCode);
+  });
+};
+
 // フィルタリングされたポケモンリスト
 const filteredPokemons = computed(() => {
   if (!searchQuery.value) {
     return pokemons.value; // 検索クエリがなければ元のリストを返す
   }
-  const query = searchQuery.value.toLowerCase();
+  const originalQuery = searchQuery.value.toLowerCase();
+  const katakanaQuery = hiraganaToKatakana(originalQuery);
+
   return pokemons.value.filter((pokemon) => {
-    const nameMatch = pokemon.name.toLowerCase().includes(query);
-    // 図鑑番号は "No.001" のような形式なので、数値部分のみを抽出して比較
-    const numberMatch = pokemon.number
-      ? pokemon.number
-          .replace(/^No\.?0*/, "")
-          .includes(query.replace(/^0*/, ""))
-      : false;
+    const pokemonNameLower = pokemon.name.toLowerCase();
+
+    // 名前検索: 元のクエリ(小文字)とカタカナ変換後のクエリ(小文字)の両方でポケモン名(小文字)と比較
+    const nameMatch =
+      pokemonNameLower.includes(originalQuery) ||
+      pokemonNameLower.includes(katakanaQuery);
+
+    // 図鑑番号検索: "No.xxx" から "xxx" を抽出し、検索クエリも数値化して比較
+    let numberMatch = false;
+    if (pokemon.number) {
+      const pokemonNumberSanitized = pokemon.number.replace(/^No\.?0*/, ""); // "001" や "1" にする
+      const queryAsNumber = originalQuery
+        .replace(/^No\.?0*/, "")
+        .replace(/[^0-9]/g, ""); // クエリから数字のみ抽出
+      if (queryAsNumber) {
+        // 数字クエリがある場合のみ番号検索
+        numberMatch = pokemonNumberSanitized.includes(queryAsNumber);
+      }
+    }
     return nameMatch || numberMatch;
   });
 });
+
+const getDisplayTypes = (pokemon: Pokemon): string[] => {
+  if (pokemon.types && pokemon.types.length > 0) {
+    return pokemon.types.filter(
+      (typeText) => typeText && typeText.trim() !== ""
+    );
+  }
+  return [];
+};
 
 onMounted(() => {
   const savedPage = sessionStorage.getItem(SESSION_STORAGE_KEY);
@@ -231,9 +264,16 @@ const goToLastPage = () => {
 }
 
 .search-filter-container {
-  margin-bottom: 25px;
+  margin-bottom: 8px;
   display: flex;
   justify-content: center;
+}
+
+.search-annotation {
+  text-align: center;
+  font-size: 0.85em;
+  color: #777;
+  margin-bottom: 20px;
 }
 
 .search-input {
