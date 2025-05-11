@@ -33,6 +33,9 @@
     </ul>
 
     <div class="pagination-controls" v-if="totalPages > 0 && !isLoading">
+      <button @click="goToFirstPage" :disabled="currentPage === 1">
+        最初へ
+      </button>
       <button @click="goToPreviousPage" :disabled="currentPage === 1">
         前へ
       </button>
@@ -42,6 +45,9 @@
       >
       <button @click="goToNextPage" :disabled="currentPage === totalPages">
         次へ
+      </button>
+      <button @click="goToLastPage" :disabled="currentPage === totalPages">
+        最後へ
       </button>
     </div>
     <div
@@ -127,6 +133,12 @@ watch(currentPage, (newPage) => {
   fetchPokemons(newPage);
 });
 
+const goToFirstPage = () => {
+  if (currentPage.value > 1) {
+    currentPage.value = 1;
+  }
+};
+
 const goToPreviousPage = () => {
   if (currentPage.value > 1) {
     currentPage.value--;
@@ -136,6 +148,12 @@ const goToPreviousPage = () => {
 const goToNextPage = () => {
   if (currentPage.value < totalPages.value) {
     currentPage.value++;
+  }
+};
+
+const goToLastPage = () => {
+  if (currentPage.value < totalPages.value) {
+    currentPage.value = totalPages.value;
   }
 };
 </script>
