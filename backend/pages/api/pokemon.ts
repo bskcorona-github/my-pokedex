@@ -89,60 +89,121 @@ export default async function handler(
       `https://pokeapi.co/api/v2/pokemon?limit=${limit}&offset=${offset}`
     );
     if (!listResponse.ok) {
+      // PokeAPI自体がエラーを返した場合 (例: 404 Not Found や 5xx Server Error)
+      console.error(
+        `PokeAPI list request failed: ${listResponse.status} ${listResponse.statusText} for url: ${listResponse.url}`
+      );
+      // この場合、エラーメッセージを具体的にして500を返すか、あるいは空のデータを返すか検討
+      // ここでは、PokeAPIからのエラーは直接500エラーとして扱う
       throw new Error(
         `PokeAPI list request failed with status ${listResponse.status}`
       );
     }
     const listData = (await listResponse.json()) as PokeApiResponse;
     const totalItems = listData.count;
-    const totalPages = Math.ceil(totalItems / limit);
+    const calculatedTotalPages = Math.ceil(totalItems / limit);
+
+    // リクエストされたページが計算上の総ページ数を超えているか、
+    // またはPokeAPIから返された結果が空の場合、有効なデータはないと判断
+    if (page > calculatedTotalPages || listData.results.length === 0) {
+      cache.set(cacheKey, {
+        // キャッシュにも空データを保存
+        results: [],
+        currentPage: page,
+        totalPages: calculatedTotalPages,
+        totalItems: totalItems,
+      });
+      res.status(200).json({
+        results: [],
+        currentPage: page,
+        totalPages: calculatedTotalPages,
+        totalItems: totalItems,
+      });
+      return;
+    }
 
     const pokemonDetailsPromises = listData.results.map((pokemon) =>
-      pLimitInstance(async (): Promise<PokemonDetail> => {
+      pLimitInstance(async (): Promise<PokemonDetail | null> => {
+        // null を返す可能性を明示
         const id = pokemon.url.split("/").filter(Boolean).pop();
         if (!id) {
-          // IDが取得できないケースはエラーまたはデフォルト値を設定
-          // ここではエラーを投げる代わりに、不完全なデータを返すことも検討可能
-          throw new Error(`Could not extract ID from URL: ${pokemon.url}`);
+          console.error(`Could not extract ID from URL: ${pokemon.url}`);
+          return null; // IDがなければ処理中断
         }
 
-        const pokemonResponse = await fetch(
-          `https://pokeapi.co/api/v2/pokemon/${id}`
-        );
-        if (!pokemonResponse.ok)
-          throw new Error(`Failed to fetch pokemon ${id}`);
-        const pokemonData =
-          (await pokemonResponse.json()) as ExternalPokemonData;
+        try {
+          const pokemonResponse = await fetch(
+            `https://pokeapi.co/api/v2/pokemon/${id}`
+          );
+          if (!pokemonResponse.ok) {
+            console.error(
+              `Failed to fetch pokemon ${id}: ${pokemonResponse.status} ${pokemonResponse.statusText}`
+            );
+            return null; // ポケモンデータの取得失敗
+          }
+          const pokemonData =
+            (await pokemonResponse.json()) as ExternalPokemonData;
 
-        const speciesResponse = await fetch(
-          `https://pokeapi.co/api/v2/pokemon-species/${id}`
-        );
-        if (!speciesResponse.ok)
-          throw new Error(`Failed to fetch species ${id}`);
-        const speciesData =
-          (await speciesResponse.json()) as ExternalSpeciesData;
+          const speciesResponse = await fetch(
+            `https://pokeapi.co/api/v2/pokemon-species/${id}`
+          );
+          if (!speciesResponse.ok) {
+            console.error(
+              `Failed to fetch species ${id}: ${speciesResponse.status} ${speciesResponse.statusText}`
+            );
+            return null; // 種族データの取得失敗
+          }
+          const speciesData =
+            (await speciesResponse.json()) as ExternalSpeciesData;
 
-        const japaneseNameEntry = speciesData.names.find(
-          (entry) =>
-            entry.language.name === "ja-Hrkt" || entry.language.name === "ja"
-        );
-        const japaneseName = japaneseNameEntry?.name || pokemonData.name;
+          const japaneseNameEntry = speciesData.names.find(
+            (entry) =>
+              entry.language.name === "ja-Hrkt" || entry.language.name === "ja"
+          );
+          const japaneseName = japaneseNameEntry?.name || pokemonData.name;
 
-        return {
-          id,
-          name: japaneseName,
-          image: pokemonData.sprites.front_default || "/pokeball.png", // 画像がない場合のフォールバック
-          number: `No.${String(id).padStart(3, "0")}`,
-        };
+          return {
+            id,
+            name: japaneseName,
+            image:
+              pokemonData.sprites.other?.["official-artwork"]?.front_default ||
+              pokemonData.sprites.front_default ||
+              "/pokeball.png",
+            number: `No.${String(id).padStart(3, "0")}`,
+          };
+        } catch (detailError) {
+          console.error(
+            `Error processing details for pokemon ID ${id}:`,
+            detailError
+          );
+          return null; // その他の予期せぬエラー
+        }
       })
     );
 
-    const results = await Promise.all(pokemonDetailsPromises);
+    // Promise.allSettled を使うと、成功/失敗に関わらず全プロミスの結果を得られる
+    const settledResults = await Promise.allSettled(pokemonDetailsPromises);
+
+    const successfulResults: PokemonDetail[] = [];
+    settledResults.forEach((result) => {
+      if (result.status === "fulfilled" && result.value !== null) {
+        successfulResults.push(result.value);
+      } else if (result.status === "rejected") {
+        // Promise.allSettled を使っているので、pLimitInstance 内の throw はここに来ないはず
+        // (pLimitInstance 内で catch して null を返しているため)
+        // もし pLimitInstance 内で throw するロジックに戻した場合は、ここでエラーログを出す
+        console.error(
+          "A promise for pokemon detail was rejected:",
+          result.reason
+        );
+      }
+      // result.value が null の場合は、上で console.error 済みなのでここでは何もしない
+    });
 
     const responseData: ApiResponse = {
-      results,
+      results: successfulResults,
       currentPage: page,
-      totalPages,
+      totalPages: calculatedTotalPages, // 計算されたtotalPagesを使用
       totalItems,
     };
 
