@@ -103,9 +103,8 @@ export default async function handler(
     const totalItems = listData.count;
     const calculatedTotalPages = Math.ceil(totalItems / limit);
 
-    // リクエストされたページが計算上の総ページ数を超えているか、
-    // またはPokeAPIから返された結果が空の場合、有効なデータはないと判断
-    if (page > calculatedTotalPages || listData.results.length === 0) {
+    // リクエストされたページが計算上の総ページ数を超えている場合、有効なデータはないと判断
+    if (page > calculatedTotalPages) {
       // cache.set(cacheKey, {
       //   // キャッシュにも空データを保存
       //   results: [],
