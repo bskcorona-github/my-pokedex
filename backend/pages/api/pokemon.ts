@@ -75,13 +75,13 @@ export default async function handler(
   const limit = parseInt(req.query.limit as string) || 20;
   const offset = (page - 1) * limit;
 
-  const cacheKey = `pokemonData-page-${page}-limit-${limit}`;
-  const cachedData = cache.get<ApiResponse>(cacheKey);
+  // const cacheKey = `pokemonData-page-${page}-limit-${limit}`;
+  // const cachedData = cache.get<ApiResponse>(cacheKey);
 
-  if (cachedData) {
-    res.status(200).json(cachedData);
-    return;
-  }
+  // if (cachedData) {
+  //   res.status(200).json(cachedData);
+  //   return;
+  // }
 
   try {
     // PokeAPIから指定された範囲のポケモンリストを取得
@@ -106,13 +106,13 @@ export default async function handler(
     // リクエストされたページが計算上の総ページ数を超えているか、
     // またはPokeAPIから返された結果が空の場合、有効なデータはないと判断
     if (page > calculatedTotalPages || listData.results.length === 0) {
-      cache.set(cacheKey, {
-        // キャッシュにも空データを保存
-        results: [],
-        currentPage: page,
-        totalPages: calculatedTotalPages,
-        totalItems: totalItems,
-      });
+      // cache.set(cacheKey, {
+      //   // キャッシュにも空データを保存
+      //   results: [],
+      //   currentPage: page,
+      //   totalPages: calculatedTotalPages,
+      //   totalItems: totalItems,
+      // });
       res.status(200).json({
         results: [],
         currentPage: page,
@@ -207,7 +207,7 @@ export default async function handler(
       totalItems,
     };
 
-    cache.set(cacheKey, responseData);
+    // cache.set(cacheKey, responseData);
     res.status(200).json(responseData);
   } catch (error) {
     console.error("エラー内容:", error);
