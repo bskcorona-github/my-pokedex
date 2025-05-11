@@ -54,8 +54,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch, useRuntimeConfig } from "vue";
+import { ref, onMounted, watch } from "vue";
 // import { useNuxtApp } from "#app"; // $axios を使わないのでコメントアウトまたは削除
+import { useRuntimeConfig } from "#app"; // 必要に応じてこちらを有効化
 
 interface Pokemon {
   id: string;
@@ -81,10 +82,8 @@ const totalItems = ref(0);
 const itemsPerPage = ref(20); // 1ページあたりのアイテム数 (バックエンドのデフォルトと合わせる)
 const isLoading = ref(false);
 
-const config = useRuntimeConfig();
-const apiBaseUrl = config.public.apiBase;
-
-// const { $axios } = useNuxtApp(); // 不要なのでコメントアウトまたは削除
+const config = useRuntimeConfig(); // この行を復活
+const apiBaseUrl = config.public.apiBase; // この行を復活
 
 const fetchPokemons = async (page: number) => {
   if (isLoading.value) return;
@@ -106,8 +105,14 @@ const fetchPokemons = async (page: number) => {
     currentPage.value = responseData.currentPage;
     totalPages.value = responseData.totalPages;
     totalItems.value = responseData.totalItems;
+
+    console.log("API Response Data:", responseData);
+    console.log("Set totalPages to:", totalPages.value);
+    console.log("Set totalItems to:", totalItems.value);
   } catch (error) {
     console.error("Error fetching pokemons:", error);
+    totalPages.value = 0;
+    totalItems.value = 0;
     // エラーハンドリング (例: ユーザーへの通知)
   } finally {
     isLoading.value = false;
