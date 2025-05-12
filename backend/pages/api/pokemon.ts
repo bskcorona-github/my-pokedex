@@ -415,38 +415,70 @@ export default async function handler(
           // タイプ情報の取得と処理
           const japaneseTypes: string[] = [];
           if (pokemonData.types && pokemonData.types.length > 0) {
-            const typePromises = pokemonData.types.map(async (typeEntry) => {
-              try {
-                console.log(
-                  `Fetching type data from URL: ${typeEntry.type.url}`
-                );
-                const typeResponse = await fetch(typeEntry.type.url);
-                if (!typeResponse.ok) {
-                  console.error(
-                    `Failed to fetch type details for ${typeEntry.type.name}: ${typeResponse.status}`
+            // タイプデータのキャッシュ用オブジェクト
+            const typeCache: { [key: string]: string } = {
+              normal: "ノーマル",
+              fire: "ほのお",
+              water: "みず",
+              electric: "でんき",
+              grass: "くさ",
+              ice: "こおり",
+              fighting: "かくとう",
+              poison: "どく",
+              ground: "じめん",
+              flying: "ひこう",
+              psychic: "エスパー",
+              bug: "むし",
+              rock: "いわ",
+              ghost: "ゴースト",
+              dragon: "ドラゴン",
+              dark: "あく",
+              steel: "はがね",
+              fairy: "フェアリー",
+            };
+
+            // タイプを順番に処理
+            for (const typeEntry of pokemonData.types) {
+              // 英語のタイプ名を取得
+              const englishTypeName = typeEntry.type.name;
+
+              // キャッシュから日本語名を取得するか、APIから取得
+              if (typeCache[englishTypeName]) {
+                japaneseTypes.push(typeCache[englishTypeName]);
+              } else {
+                try {
+                  console.log(
+                    `Fetching type data from URL: ${typeEntry.type.url}`
                   );
-                  return null; // タイプ詳細の取得失敗
+                  const typeResponse = await fetch(typeEntry.type.url);
+                  if (!typeResponse.ok) {
+                    console.error(
+                      `Failed to fetch type details for ${englishTypeName}: ${typeResponse.status}`
+                    );
+                    japaneseTypes.push(englishTypeName); // エラー時は英語名で代用
+                    continue;
+                  }
+
+                  const typeData =
+                    (await typeResponse.json()) as ExternalTypeData;
+                  const japaneseTypeNameEntry = typeData.names.find(
+                    (nameEntry) =>
+                      nameEntry.language.name === "ja-Hrkt" ||
+                      nameEntry.language.name === "ja"
+                  );
+
+                  const japaneseTypeName =
+                    japaneseTypeNameEntry?.name || englishTypeName;
+                  japaneseTypes.push(japaneseTypeName);
+                } catch (typeError) {
+                  console.error(
+                    `Error fetching type details for ${englishTypeName}:`,
+                    typeError
+                  );
+                  japaneseTypes.push(englishTypeName); // エラー時は英語名で代用
                 }
-                const typeData =
-                  (await typeResponse.json()) as ExternalTypeData;
-                const japaneseTypeNameEntry = typeData.names.find(
-                  (nameEntry) =>
-                    nameEntry.language.name === "ja-Hrkt" ||
-                    nameEntry.language.name === "ja"
-                );
-                return japaneseTypeNameEntry?.name || typeEntry.type.name;
-              } catch (typeError) {
-                console.error(
-                  `Error fetching type details for ${typeEntry.type.name}:`,
-                  typeError
-                );
-                return typeEntry.type.name; // エラー時は英語名フォールバック
               }
-            });
-            const resolvedTypes = await Promise.all(typePromises);
-            resolvedTypes.forEach((typeName) => {
-              if (typeName) japaneseTypes.push(typeName);
-            });
+            }
           }
           console.log(
             `Determined types for ${id}: ${japaneseTypes.join(", ")}`

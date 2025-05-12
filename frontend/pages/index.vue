@@ -73,19 +73,6 @@
           <div class="pokemon-info">
             <p class="pokemon-number">{{ pokemon.number }}</p>
             <h3 class="pokemon-name">{{ pokemon.name }}</h3>
-            <div
-              v-if="getDisplayTypes(pokemon).length > 0"
-              class="pokemon-types"
-            >
-              <span
-                v-for="(typeText, index) in getDisplayTypes(pokemon)"
-                :key="index"
-                class="type-tag"
-                :class="'type-' + typeText.toLowerCase()"
-              >
-                {{ typeText }}
-              </span>
-            </div>
           </div>
         </router-link>
       </div>
