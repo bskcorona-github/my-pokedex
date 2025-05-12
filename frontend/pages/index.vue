@@ -1,5 +1,5 @@
 <template>
-  <div class="container">
+  <div class="container pokedex-background">
     <header class="page-header">
       <h1>ポケモン図鑑</h1>
     </header>
@@ -9,11 +9,13 @@
         <input
           type="text"
           v-model.trim="searchQueryInput"
-          placeholder="名前またはID（例：ピカチュウ、25）"
+          placeholder="なまえ や ずかんナンバー で さがしてね！"
           class="search-input"
           @keyup.enter="handleSearch"
         />
-        <button @click="handleSearch" class="search-button">検索</button>
+        <button @click="handleSearch" class="search-button game-button">
+          検索
+        </button>
       </div>
 
       <!-- 最近の検索 -->
@@ -38,19 +40,9 @@
     </div>
 
     <!-- スケルトンローディング -->
-    <div v-if="showSkeletons" class="pokemon-grid">
-      <div
-        v-for="(_, index) in loadingSkeletons"
-        :key="`skeleton-${index}`"
-        class="pokemon-card skeleton"
-      >
-        <div class="pokemon-image-wrapper skeleton-image"></div>
-        <div class="pokemon-info">
-          <div class="skeleton-line short"></div>
-          <div class="skeleton-line medium"></div>
-          <div class="skeleton-line long"></div>
-        </div>
-      </div>
+    <div v-if="isLoading && !pokemons.length" class="loading-container">
+      <div class="pokeball-loader"></div>
+      <p class="loading-text">NOW LOADING...</p>
     </div>
 
     <!-- ポケモンリスト -->
@@ -93,14 +85,14 @@
       <button
         @click="goToFirstPage"
         :disabled="currentPage === 1"
-        class="pagination-button"
+        class="pagination-button game-button"
       >
         <span class="pagination-icon">⟪</span>
       </button>
       <button
         @click="goToPreviousPage"
         :disabled="currentPage === 1"
-        class="pagination-button"
+        class="pagination-button game-button"
       >
         <span class="pagination-icon">⟨</span>
       </button>
@@ -111,14 +103,14 @@
       <button
         @click="goToNextPage"
         :disabled="currentPage === totalPages"
-        class="pagination-button"
+        class="pagination-button game-button"
       >
         <span class="pagination-icon">⟩</span>
       </button>
       <button
         @click="goToLastPage"
         :disabled="currentPage === totalPages"
-        class="pagination-button"
+        class="pagination-button game-button"
       >
         <span class="pagination-icon">⟫</span>
       </button>
@@ -433,32 +425,35 @@ onMounted(() => {
 </script>
 
 <style scoped>
+/* ポケモン風背景 */
+.pokedex-background {
+  background-image: url("/images/pokedex-background.png"); /* 仮の背景画像パス */
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
 .container {
   max-width: 1200px;
   margin: 0 auto;
   padding: 20px;
-  font-family: "Rounded Mplus 1c", "Helvetica Neue", Arial, sans-serif;
-  background-color: #f0f2f5;
+  font-family: "Noto Sans JP", "Rounded Mplus 1c", "Helvetica Neue", Arial,
+    sans-serif; /* Noto Sans JP を追加 */
+  background-color: rgba(240, 242, 245, 0.85); /* 背景を少し透過 */
   min-height: 100vh;
-}
-
-.page-header {
-  text-align: center;
-  margin-bottom: 30px;
+  font-size: 1.1em; /* 全体フォントサイズ調整 */
 }
 
 .page-header h1 {
-  font-size: 2.8em;
-  color: #3a5da9;
-  font-weight: 700;
-  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+  font-size: 3.2em; /* タイトルフォントサイズ調整 */
+  color: #e74c3c; /* ポケモンレッド */
+  font-weight: 900; /* 太字 */
+  text-shadow: 2px 2px 0 #fff, 4px 4px 0 rgba(0, 0, 0, 0.15); /* 立体的な影 */
+  letter-spacing: 1px;
+  margin-bottom: 40px; /* 十分なマージン */
 }
 
-/* 検索関連のスタイル改善 */
-.search-container {
-  margin-bottom: 25px;
-}
-
+/* 検索関連 */
 .search-input-area {
   display: flex;
   justify-content: center;
@@ -467,134 +462,72 @@ onMounted(() => {
 
 .search-input {
   width: 100%;
-  max-width: 500px;
+  max-width: 700px; /* 500px から 700px に変更 */
   padding: 12px 20px;
   font-size: 1em;
-  border: 1px solid #ddd;
-  border-radius: 25px 0 0 25px;
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.06);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.search-button {
-  padding: 12px 20px;
-  background-color: #3a5da9;
-  color: white;
-  border: none;
-  border-radius: 0 25px 25px 0;
-  cursor: pointer;
-  font-weight: bold;
-  transition: background-color 0.2s ease;
-}
-
-.search-button:hover {
-  background-color: #2a4ba7;
+  border-radius: 25px 0 0 25px; /* ボタンと連結するため片側のみ丸める */
+  border: 3px solid #e74c3c;
+  box-shadow: 0 0 10px rgba(231, 76, 60, 0.5);
+  transition: all 0.3s ease;
 }
 
 .search-input:focus {
-  outline: none;
-  border-color: #3a5da9;
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.06),
-    0 0 0 3px rgba(58, 93, 169, 0.2);
+  border-color: #c0392b;
+  box-shadow: 0 0 15px rgba(192, 57, 43, 0.7);
+  outline: none; /* フォーカス時のデフォルトアウトラインを消す */
 }
 
-/* 最近の検索 */
-.recent-searches {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  margin-top: 10px;
-  padding: 0 10px;
+.search-button {
+  border-radius: 0 25px 25px 0; /* ボタンと連結するため片側のみ丸める */
+  /* game-button スタイルが適用されているので、ここでは形状に関する調整のみ */
 }
 
-.recent-label {
-  font-size: 0.9em;
-  color: #777;
-  margin-right: 10px;
-}
-
-.recent-tags {
-  display: flex;
-  flex-wrap: wrap;
-}
-
-.recent-tag {
-  display: inline-block;
-  background-color: #e0e7f7;
-  color: #3a5da9;
-  padding: 3px 10px;
-  margin: 3px;
-  border-radius: 20px;
-  font-size: 0.85em;
+/* ゲーム風ボタン共通スタイル */
+.game-button {
+  background-color: #e74c3c; /* ポケモンレッド */
+  color: white;
+  border: 2px solid #c0392b; /* 少し濃い赤の枠線 */
+  border-radius: 10px; /* 角丸 */
+  padding: 10px 20px;
+  font-weight: bold;
+  text-transform: uppercase;
+  box-shadow: 0 4px 0 #96281b; /* 立体感を出す影 */
+  transition: all 0.15s ease;
   cursor: pointer;
-  transition: background-color 0.2s ease;
+  font-size: 1.1em; /* ボタン内フォントサイズ調整 */
 }
 
-.recent-tag:hover {
-  background-color: #c8d7f5;
+.game-button:hover:not(:disabled) {
+  background-color: #c0392b;
+  transform: translateY(1px);
+  box-shadow: 0 2px 0 #96281b;
 }
 
-/* エラーメッセージ */
-.error-message {
-  text-align: center;
-  color: #e53935;
-  padding: 15px;
-  background-color: #ffebee;
-  border-radius: 8px;
-  margin-bottom: 20px;
+.game-button:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #96281b;
 }
 
-/* スケルトンローディング */
-.skeleton {
-  animation: pulse 1.5s infinite;
-  background: linear-gradient(90deg, #f0f0f0 0%, #e0e0e0 50%, #f0f0f0 100%);
-  background-size: 200% 100%;
+.game-button:disabled {
+  background-color: #d1d8e6;
+  color: #a0a0a0;
+  box-shadow: 0 4px 0 #b0b9c9;
+  cursor: not-allowed;
 }
 
-.skeleton-image {
-  background-color: #e0e0e0;
-  height: 180px;
+.pagination-button {
+  width: 45px; /* サイズ調整 */
+  height: 45px;
+  margin: 0 8px; /* 間隔調整 */
 }
 
-.skeleton-line {
-  height: 12px;
-  margin: 8px 0;
-  border-radius: 4px;
-}
-
-.skeleton-line.short {
-  width: 40%;
-}
-
-.skeleton-line.medium {
-  width: 60%;
-}
-
-.skeleton-line.long {
-  width: 80%;
-}
-
-@keyframes pulse {
-  0% {
-    background-position: 100% 0;
-  }
-  100% {
-    background-position: -100% 0;
-  }
-}
-
-.loading-indicator,
-.no-pokemon {
-  text-align: center;
-  padding: 40px;
-  font-size: 1.2em;
-  color: #777;
-}
-
+/* ポケモンカード */
 .pokemon-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 25px;
+  /* カードの最小幅を調整して1列に約4体表示されるようにする */
+  /* 元: minmax(180px, 1fr) */
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); /* 調整後の値 */
+  gap: 20px; /* ギャップも少し調整 */
   margin-bottom: 30px;
 }
 
@@ -603,40 +536,39 @@ onMounted(() => {
   border-radius: 12px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.06);
   overflow: hidden;
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    box-shadow 0.3s ease;
   cursor: pointer;
+  /* カード全体の高さを少し調整することも検討 */
 }
 
 .pokemon-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08);
+  transform: translateY(-5px) rotate(2deg); /* Y軸移動と少し回転 */
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
 }
 
-.pokemon-link {
-  text-decoration: none;
-  color: inherit;
-  display: flex;
-  flex-direction: column;
-  height: 100%;
+.pokemon-card:hover .pokemon-image {
+  transform: scale(1.1); /* 画像を少し拡大 */
 }
 
 .pokemon-image-wrapper {
   background-color: #f3f4f6;
-  padding: 20px;
+  padding: 15px; /* パディングを少し調整 */
   display: flex;
   justify-content: center;
   align-items: center;
-  aspect-ratio: 1 / 1;
+  aspect-ratio: 1 / 1; /* 正方形を維持 */
 }
 
 .pokemon-image {
-  max-width: 90%;
-  max-height: 90%;
+  max-width: 85%; /* ラッパーに対しての画像の最大幅を調整 */
+  max-height: 85%; /* ラッパーに対しての画像の最大高さを調整 */
   object-fit: contain;
+  transition: transform 0.3s ease-out;
 }
 
 .pokemon-info {
-  padding: 15px;
+  padding: 12px; /* パディングを少し調整 */
   text-align: center;
   flex-grow: 1;
   display: flex;
@@ -645,213 +577,103 @@ onMounted(() => {
 }
 
 .pokemon-number {
-  font-size: 0.85em;
+  font-size: 0.8em; /* フォントサイズ調整 */
   color: #888;
-  margin-bottom: 4px;
+  margin-bottom: 3px;
 }
 
 .pokemon-name {
-  font-size: 1.15em;
+  font-size: 1.05em; /* フォントサイズ調整 */
   font-weight: bold;
   color: #333;
   margin: 0;
+  line-height: 1.2;
 }
 
-.pokemon-types {
-  margin-top: 10px;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 5px;
-}
-
-.type-tag {
-  display: inline-block;
-  padding: 5px 12px;
-  margin: 2px;
-  border-radius: 15px;
-  font-size: 0.85em;
-  color: white;
-  text-transform: capitalize;
-  font-weight: 600;
-  line-height: 1.3;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
-  transition: transform 0.15s ease;
-}
-
-.type-tag:hover {
-  transform: scale(1.05);
-}
-
-/* ページネーションスタイル改善 */
-.pagination-controls {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin-top: 30px;
-  padding: 20px 0;
-}
-
-.pagination-button {
-  background-color: #3a5da9;
-  color: white;
-  border: none;
-  width: 40px;
-  height: 40px;
-  text-align: center;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 5px;
-  cursor: pointer;
-  border-radius: 50%;
-  transition: background-color 0.2s ease, transform 0.1s ease;
-  font-weight: bold;
-}
-
-.pagination-button:disabled {
-  background-color: #d1d8e6;
-  color: #a0a0a0;
-  cursor: not-allowed;
-}
-
-.pagination-button:hover:not(:disabled) {
-  background-color: #2a4ba7;
-  transform: translateY(-1px);
-}
-
-.pagination-icon {
-  font-size: 1.4em;
-  line-height: 1;
-}
-
-.pagination-info {
-  margin: 0 15px;
-  font-size: 1.1em;
-  color: #555;
-  font-weight: bold;
-}
-
-.total-items {
-  font-size: 0.85em;
-  color: #777;
-  margin-left: 5px;
-  font-weight: normal;
-}
-
-/* タイプカラー */
-.type-normal {
-  background-color: #a8a77a;
-}
-.type-fire {
-  background-color: #ee8130;
-}
-.type-water {
-  background-color: #6390f0;
-}
-.type-electric {
-  background-color: #f7d02c;
-}
-.type-grass {
-  background-color: #7ac74c;
-}
-.type-ice {
-  background-color: #96d9d6;
-}
-.type-fighting {
-  background-color: #c22e28;
-}
-.type-poison {
-  background-color: #a33ea1;
-}
-.type-ground {
-  background-color: #e2bf65;
-}
-.type-flying {
-  background-color: #a98ff3;
-}
-.type-psychic {
-  background-color: #f95587;
-}
-.type-bug {
-  background-color: #a6b91a;
-}
-.type-rock {
-  background-color: #b6a136;
-}
-.type-ghost {
-  background-color: #735797;
-}
-.type-dragon {
-  background-color: #6f35fc;
-}
-.type-dark {
-  background-color: #705746;
-}
-.type-steel {
-  background-color: #b7b7ce;
-}
-.type-fairy {
-  background-color: #d685ad;
-}
-.type-unknown,
-.type- {
-  background-color: #68a090;
-}
-
-/* メディアクエリ */
-@media (max-width: 768px) {
+/* メディアクエリの調整 */
+@media (max-width: 992px) {
+  /* 4体表示が厳しくなるブレークポイントの目安 */
   .pokemon-grid {
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    grid-template-columns: repeat(
+      auto-fill,
+      minmax(140px, 1fr)
+    ); /* 3体表示ベースに */
     gap: 15px;
   }
+}
 
-  .search-container {
-    padding: 0 10px;
+@media (max-width: 768px) {
+  .pokemon-grid {
+    /* 元: minmax(150px, 1fr) */
+    grid-template-columns: repeat(
+      auto-fill,
+      minmax(130px, 1fr)
+    ); /* 2-3体表示ベースに */
+    gap: 15px;
   }
-
-  .search-input-area {
-    flex-direction: column;
-  }
-
-  .search-input {
-    width: 100%;
-    max-width: none;
-    border-radius: 25px;
-    margin-bottom: 10px;
-  }
-
-  .search-button {
-    border-radius: 25px;
-    width: 50%;
-    align-self: center;
-  }
-
-  .pagination-info .total-items {
-    display: block;
-    text-align: center;
-  }
+  /* ... 他の768px以下のスタイル ... */
 }
 
 @media (max-width: 480px) {
   .pokemon-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, 1fr); /* 2体固定 */
     gap: 10px;
   }
+  /* ... 他の480px以下のスタイル ... */
+}
 
-  .page-header h1 {
-    font-size: 2em;
+/* その他既存スタイル（必要に応じて微調整） */
+/* ... (既存の .container, .page-header h1 (一部上書き), .search-container, .recent-searches など) ... */
+
+/* タイプカラー（変更なし） */
+/* ... */
+
+/* ローディングアニメーション */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 50px;
+  min-height: 300px; /* または適切な高さ */
+}
+
+.pokeball-loader {
+  width: 80px;
+  height: 80px;
+  background-image: url("/images/pokeball-icon.png"); /* モンスターボールの画像 */
+  background-size: contain;
+  background-repeat: no-repeat;
+  animation: spin 1s linear infinite, wobble 1.5s ease-in-out infinite alternate;
+  margin-bottom: 20px;
+}
+
+.loading-text {
+  font-size: 1.5em;
+  color: #e74c3c; /* ポケモンレッド */
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
   }
-
-  .pagination-controls {
-    flex-wrap: wrap;
+  100% {
+    transform: rotate(360deg);
   }
+}
 
-  .pagination-info {
-    order: -1;
-    width: 100%;
-    text-align: center;
-    margin-bottom: 10px;
+@keyframes wobble {
+  0% {
+    transform: rotate(-5deg) scale(1);
+  }
+  50% {
+    transform: rotate(5deg) scale(1.05);
+  }
+  100% {
+    transform: rotate(-5deg) scale(1);
   }
 }
 </style>

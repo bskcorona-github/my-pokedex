@@ -1,42 +1,23 @@
 <template>
-  <div class="pokemon-detail-container">
+  <div class="pokemon-detail-container pokedex-background">
     <!-- スケルトンローディング -->
-    <div v-if="isLoading" class="skeleton-container">
-      <div class="skeleton-header">
-        <div class="skeleton-title"></div>
-      </div>
-      <div class="pokemon-layout">
-        <div class="pokemon-image-container">
-          <div class="skeleton-image"></div>
-        </div>
-        <div class="pokemon-info-container">
-          <div class="skeleton-line short"></div>
-          <div class="skeleton-line medium"></div>
-          <div class="skeleton-line short"></div>
-          <div class="skeleton-line medium"></div>
-          <div class="skeleton-line long"></div>
-        </div>
-      </div>
-      <div class="skeleton-stats">
-        <div class="skeleton-line medium"></div>
-        <div class="skeleton-line full"></div>
-        <div class="skeleton-line full"></div>
-        <div class="skeleton-line full"></div>
-        <div class="skeleton-line full"></div>
-        <div class="skeleton-line full"></div>
-      </div>
+    <div v-if="isLoading" class="loading-container">
+      <div class="pokeball-loader"></div>
+      <p class="loading-text">NOW LOADING...</p>
     </div>
 
     <!-- エラー表示 -->
     <div v-else-if="error" class="error-message">
       <p>{{ error.message }}</p>
-      <button @click="retryFetch" class="retry-button">再試行</button>
+      <button @click="retryFetch" class="retry-button game-button">
+        再試行
+      </button>
     </div>
 
     <!-- ポケモン詳細表示 -->
     <div v-else-if="pokemon" class="pokemon-detail-content">
       <header class="pokemon-header">
-        <button @click="goHome" class="back-button small">
+        <button @click="goHome" class="back-button small game-button">
           <span class="back-icon">←</span>一覧へ戻る
         </button>
         <h1>
@@ -104,17 +85,19 @@
         <router-link
           v-if="prevPokemonId"
           :to="`/pokemon/${prevPokemonId}`"
-          class="nav-link prev-link"
+          class="nav-link prev-link game-button"
           @mouseenter="preloadPokemon(prevPokemonId)"
         >
           <span class="nav-icon">←</span>
           前のポケモン
         </router-link>
-        <button @click="goHome" class="back-button">一覧に戻る</button>
+        <button @click="goHome" class="back-button game-button">
+          一覧に戻る
+        </button>
         <router-link
           v-if="nextPokemonId"
           :to="`/pokemon/${nextPokemonId}`"
-          class="nav-link next-link"
+          class="nav-link next-link game-button"
           @mouseenter="preloadPokemon(nextPokemonId)"
         >
           次のポケモン
@@ -126,7 +109,9 @@
     <!-- データがない場合 -->
     <div v-else class="no-data">
       <p>ポケモン情報が見つかりません。</p>
-      <button @click="goHome" class="back-button">一覧に戻る</button>
+      <button @click="goHome" class="back-button game-button">
+        一覧に戻る
+      </button>
     </div>
   </div>
 </template>
@@ -313,74 +298,138 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+/* ポケモン風背景（index.vueと共通化も検討） */
+.pokedex-background {
+  background-image: url("/images/pokedex-background.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
 .pokemon-detail-container {
   max-width: 800px;
   margin: 20px auto;
   padding: 20px;
-  background-color: #fff;
+  background-color: rgba(255, 255, 255, 0.9); /* 背景を少し透過 */
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  font-family: "Rounded Mplus 1c", "Helvetica Neue", Arial, sans-serif;
+  font-family: "Noto Sans JP", "Rounded Mplus 1c", "Helvetica Neue", Arial,
+    sans-serif;
+  font-size: 1.1em; /* 全体フォントサイズ調整 */
 }
 
-/* スケルトンローディング */
-.skeleton-container {
-  animation: pulse 1.5s infinite ease-in-out;
+/* ゲーム風ボタン共通スタイル */
+.game-button {
+  background-color: #e74c3c; /* ポケモンレッド */
+  color: white;
+  border: 2px solid #c0392b; /* 少し濃い赤の枠線 */
+  border-radius: 10px; /* 角丸 */
+  padding: 10px 20px;
+  font-weight: bold;
+  text-transform: uppercase;
+  box-shadow: 0 4px 0 #96281b; /* 立体感を出す影 */
+  transition: all 0.15s ease;
+  cursor: pointer;
+  font-size: 1em; /* 詳細ページボタンフォントサイズ調整 */
 }
 
-.skeleton-header {
-  text-align: center;
-  margin-bottom: 30px;
+.game-button:hover:not(:disabled) {
+  background-color: #c0392b;
+  transform: translateY(1px);
+  box-shadow: 0 2px 0 #96281b;
 }
 
-.skeleton-title {
-  height: 36px;
-  width: 60%;
-  background-color: #e0e0e0;
-  margin: 0 auto;
-  border-radius: 6px;
+.game-button:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #96281b;
 }
 
-.skeleton-image {
-  width: 100%;
-  height: 200px;
-  background-color: #e0e0e0;
-  border-radius: 8px;
+.game-button:disabled {
+  background-color: #d1d8e6;
+  color: #a0a0a0;
+  box-shadow: 0 4px 0 #b0b9c9;
+  cursor: not-allowed;
 }
 
-.skeleton-line {
-  height: 14px;
-  background-color: #e0e0e0;
-  margin: 12px 0;
-  border-radius: 4px;
+.pokemon-header h1 {
+  color: #e74c3c; /* ポケモンレッド */
+  font-weight: 900;
+  text-shadow: 2px 2px 0 #fff, 4px 4px 0 rgba(0, 0, 0, 0.1);
 }
 
-.skeleton-line.short {
-  width: 30%;
-}
-.skeleton-line.medium {
-  width: 60%;
-}
-.skeleton-line.long {
-  width: 90%;
-}
-.skeleton-line.full {
-  width: 100%;
+.pokemon-detail-item span:first-child {
+  color: #e74c3c; /* ラベルの文字色も赤に */
 }
 
-.skeleton-stats {
-  margin-top: 30px;
+.stats-section h2 {
+  color: #e74c3c; /* セクションタイトルも赤に */
 }
 
-@keyframes pulse {
+.nav-link {
+  /* game-buttonクラスで代替するため、個別のスタイルは調整または削除 */
+  /* padding: 8px 15px; game-buttonで上書き */
+}
+
+.back-button.small {
+  /* game-buttonクラスで代替するため、font-size, paddingなどは調整 */
+  font-size: 0.9em; /* 少し小さめに */
+  padding: 8px 15px;
+}
+
+/* ローディングアニメーション (index.vueからコピー＆ペースト、必要に応じて調整) */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 50px;
+  min-height: 400px; /* 詳細ページ用に高さを調整 */
+  background-color: rgba(
+    255,
+    255,
+    255,
+    0.8
+  ); /* 背景を少し白っぽくしてコンテンツを隠す */
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+
+.pokeball-loader {
+  width: 100px; /* 少し大きめに */
+  height: 100px;
+  background-image: url("/images/pokeball-icon.png");
+  background-size: contain;
+  background-repeat: no-repeat;
+  animation: spin 1s linear infinite, wobble 1.5s ease-in-out infinite alternate;
+  margin-bottom: 25px;
+}
+
+.loading-text {
+  font-size: 1.8em; /* 少し大きめに */
+  color: #e74c3c;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+@keyframes spin {
   0% {
-    opacity: 0.6;
-  }
-  50% {
-    opacity: 1;
+    transform: rotate(0deg);
   }
   100% {
-    opacity: 0.6;
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes wobble {
+  0% {
+    transform: rotate(-5deg) scale(1);
+  }
+  50% {
+    transform: rotate(5deg) scale(1.05);
+  }
+  100% {
+    transform: rotate(-5deg) scale(1);
   }
 }
 
@@ -510,12 +559,6 @@ onMounted(async () => {
   margin-top: 40px;
   padding-top: 20px;
   border-top: 1px solid #eee;
-}
-
-.stats-section h2 {
-  color: #3a5da9;
-  font-size: 1.6em;
-  margin-bottom: 20px;
 }
 
 .stats-list {
