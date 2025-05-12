@@ -12,6 +12,7 @@
           placeholder="なまえ や ずかんナンバー で さがしてね！"
           class="search-input"
           @keyup.enter="handleSearch"
+          @keydown="handleRecentSearchKeyDown"
         />
         <button
           v-if="searchQueryInput"
@@ -34,7 +35,11 @@
             v-for="(query, index) in recentSearches"
             :key="index"
             class="recent-tag"
+            :class="{ selected: index === selectedRecentSearchIndex }"
             @click="selectRecentSearch(query)"
+            tabindex="0"
+            @keyup.enter="selectRecentSearch(query)"
+            @focus="selectedRecentSearchIndex = index"
           >
             {{ query }}
           </span>
@@ -169,6 +174,7 @@ const loadingSkeletons = Array(20).fill(null);
 const prefetchedPages = ref<{ [key: string]: PokemonApiResponse }>({});
 const recentSearches = ref<string[]>([]);
 const errorMessage = ref("");
+const selectedRecentSearchIndex = ref(-1);
 
 const config = useRuntimeConfig();
 const apiBaseUrl = config.public.apiBase;
@@ -240,6 +246,48 @@ const handleSearch = () => {
 const selectRecentSearch = (query: string) => {
   searchQueryInput.value = query;
   handleSearch();
+  selectedRecentSearchIndex.value = -1;
+};
+
+// 最近の検索のキーボード操作
+const handleRecentSearchKeyDown = (event: KeyboardEvent) => {
+  if (recentSearches.value.length === 0) return;
+
+  switch (event.key) {
+    case "ArrowDown":
+      event.preventDefault();
+      selectedRecentSearchIndex.value =
+        (selectedRecentSearchIndex.value + 1) % recentSearches.value.length;
+      focusRecentSearchTag();
+      break;
+    case "ArrowUp":
+      event.preventDefault();
+      selectedRecentSearchIndex.value =
+        (selectedRecentSearchIndex.value - 1 + recentSearches.value.length) %
+        recentSearches.value.length;
+      focusRecentSearchTag();
+      break;
+    case "Enter":
+      if (selectedRecentSearchIndex.value !== -1) {
+        event.preventDefault();
+        selectRecentSearch(
+          recentSearches.value[selectedRecentSearchIndex.value]
+        );
+      }
+      break;
+    case "Escape":
+      selectedRecentSearchIndex.value = -1;
+      break;
+  }
+};
+
+// 選択されたタグにフォーカスを移す（アクセシビリティ向上）
+const focusRecentSearchTag = async () => {
+  await nextTick();
+  const selectedTag = document.querySelector(".recent-tag.selected");
+  if (selectedTag instanceof HTMLElement) {
+    selectedTag.focus();
+  }
 };
 
 // ポケモンデータを取得する関数
@@ -740,4 +788,14 @@ onMounted(() => {
   /* 必要に応じて、検索結果なし特有のスタイルをここに追加 */
   color: #555; /* 少しだけ文字色を変えるなど */
 }
+
+.recent-tag.selected {
+  background-color: #e74c3c; /* ポケモンレッド */
+  color: white;
+  border-color: #c0392b;
+  outline: 2px solid #c0392b; /* フォーカスとは別に選択状態を明示 */
+}
+
+/* 検索入力エリアのスタイル調整 */
+/* ... existing code ... */
 </style>
