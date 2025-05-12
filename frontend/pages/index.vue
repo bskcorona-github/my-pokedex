@@ -140,6 +140,7 @@
 <script setup lang="ts">
 import { ref, onMounted, watch, computed, nextTick } from "vue";
 import { useRuntimeConfig } from "#app";
+import { useHead } from "nuxt/app";
 
 interface Pokemon {
   id: string;
@@ -175,6 +176,11 @@ const prefetchedPages = ref<{ [key: string]: PokemonApiResponse }>({});
 const recentSearches = ref<string[]>([]);
 const errorMessage = ref("");
 const selectedRecentSearchIndex = ref(-1);
+
+// ページタイトル設定
+useHead({
+  title: "ポケモン一覧 | ポケモン図鑑",
+});
 
 const config = useRuntimeConfig();
 const apiBaseUrl = config.public.apiBase;

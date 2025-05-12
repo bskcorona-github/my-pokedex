@@ -120,6 +120,7 @@
 import { ref, onMounted, computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useRuntimeConfig } from "#app";
+import { useHead } from "nuxt/app";
 
 interface PokemonStat {
   name: string;
@@ -152,6 +153,17 @@ const pokemon = ref<PokemonDetail | null>(null);
 const isLoading = ref(true);
 const error = ref<Error | null>(null);
 const cachedPokemon = ref<Record<string, PokemonDetail>>({});
+
+// ページタイトル設定 (リアクティブ)
+useHead(
+  computed(() => ({
+    title: pokemon.value
+      ? `${pokemon.value.name} | ポケモン図鑑`
+      : error.value
+      ? "エラー | ポケモン図鑑"
+      : "ポケモン詳細 | ポケモン図鑑",
+  }))
+);
 
 // 表示用エラーメッセージ
 const displayErrorMessage = computed(() => {
@@ -305,11 +317,6 @@ watch(
       isLoading.value = true;
       error.value = null;
       await fetchPokemonData(newId as string);
-
-      // ページタイトルを更新
-      if (pokemon.value) {
-        document.title = `${pokemon.value.name} | ポケモン図鑑`;
-      }
 
       // ページトップにスクロール
       window.scrollTo({ top: 0, behavior: "smooth" });
