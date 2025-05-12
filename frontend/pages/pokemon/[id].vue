@@ -7,8 +7,8 @@
     </div>
 
     <!-- エラー表示 -->
-    <div v-else-if="error" class="error-message">
-      <p>{{ error.message }}</p>
+    <div v-else-if="error" class="error-message-box">
+      <p>{{ displayErrorMessage }}</p>
       <button @click="retryFetch" class="retry-button game-button">
         再試行
       </button>
@@ -107,8 +107,8 @@
     </div>
 
     <!-- データがない場合 -->
-    <div v-else class="no-data">
-      <p>ポケモン情報が見つかりません。</p>
+    <div v-else class="error-message-box">
+      <p>その ポケモンは まだ はっけん されていないようだ…！</p>
       <button @click="goHome" class="back-button game-button">
         一覧に戻る
       </button>
@@ -152,6 +152,23 @@ const pokemon = ref<PokemonDetail | null>(null);
 const isLoading = ref(true);
 const error = ref<Error | null>(null);
 const cachedPokemon = ref<Record<string, PokemonDetail>>({});
+
+// 表示用エラーメッセージ
+const displayErrorMessage = computed(() => {
+  if (error.value) {
+    // TODO: error.valueの内容を見て、より具体的なメッセージを返すことも可能
+    // 例えば、e.response && e.response.status === 404 のようなチェック
+    // 今回は汎用的ながら少しポケモン風のメッセージに
+    if (
+      error.value.message.includes("404") ||
+      (error.value.message.includes("Failed to fetch") && !navigator.onLine)
+    ) {
+      return "その ポケモンは みつからなかったか、ネットワークが つながって いないようだ…";
+    }
+    return "オーキド博士もびっくりじゃ！データの取得にしっぱいしたぞ…もう一度ためしてくれ！";
+  }
+  return "なにか エラーが おきたようだ…";
+});
 
 // 前後のポケモンのID
 const prevPokemonId = computed(() => {
@@ -216,8 +233,20 @@ const fetchPokemonData = async (id: string) => {
         // CORSの問題を解決するためのオプション
         mode: "cors",
         credentials: "omit",
+        // 404エラーもcatchで処理できるようにする
+        ignoreResponseError: true,
       }
     );
+
+    // $fetchでignoreResponseError: true を使うと、エラー時もresponseDataに情報が入る場合がある
+    // 明示的にステータスコードや内容をチェックする
+    // (この例では簡易的にresponseData自体やresponseData.nameの存在をチェック)
+    if (!responseData || !responseData.name) {
+      // バックエンドが404時に特定の構造を返すか、あるいは$fetchがどう処理するかに依存
+      // ここでは pokemon.value にセットせず、エラーを発生させる
+      throw new Error(`Pokemon with ID ${id} not found or invalid data.`);
+    }
+
     pokemon.value = responseData;
 
     // キャッシュに保存
@@ -230,10 +259,13 @@ const fetchPokemonData = async (id: string) => {
     preloadPokemon(String(parseInt(id) + 1));
   } catch (e: any) {
     console.error("データ取得エラー:", e);
-    error.value =
-      e instanceof Error
-        ? e
-        : new Error("ポケモンデータの取得に失敗しました。");
+    // error.value には Error オブジェクトをセットする
+    if (e instanceof Error) {
+      error.value = e;
+    } else {
+      error.value = new Error("ポケモンデータの取得に失敗しました。");
+    }
+    pokemon.value = null; // ポケモンデータがないことを明示
   } finally {
     isLoading.value = false;
   }
@@ -433,14 +465,18 @@ onMounted(async () => {
   }
 }
 
-/* エラーメッセージ */
-.error-message {
+/* エラーメッセージボックスのスタイル (index.vueからコピー) */
+.error-message-box {
+  background-color: #f0f0f0; /* 薄いグレー背景 */
+  border: 3px solid #777; /* 少し濃いめの枠線 */
+  border-radius: 10px;
+  padding: 20px;
+  margin: 20px auto;
+  max-width: 600px;
   text-align: center;
-  padding: 40px 20px;
-  color: #e53935;
-  background-color: #ffebee;
-  border-radius: 8px;
-  margin-bottom: 20px;
+  font-size: 1.1em;
+  color: #333; /* やや暗めの文字色 */
+  box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.1); /* 内側に少し影 */
 }
 
 .retry-button {
@@ -670,6 +706,7 @@ onMounted(async () => {
 }
 
 /* データなし表示 */
+/*
 .no-data {
   text-align: center;
   padding: 40px 20px;
@@ -680,6 +717,7 @@ onMounted(async () => {
   margin-bottom: 20px;
   font-size: 1.2em;
 }
+*/
 
 /* タイプカラー */
 .type-normal {

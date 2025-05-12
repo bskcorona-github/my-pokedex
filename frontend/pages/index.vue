@@ -13,6 +13,14 @@
           class="search-input"
           @keyup.enter="handleSearch"
         />
+        <button
+          v-if="searchQueryInput"
+          @click="clearSearchInput"
+          class="clear-search-button"
+          aria-label="検索クエリをクリア"
+        >
+          ×
+        </button>
         <button @click="handleSearch" class="search-button game-button">
           検索
         </button>
@@ -35,7 +43,7 @@
     </div>
 
     <!-- エラーメッセージ -->
-    <div v-if="errorMessage" class="error-message">
+    <div v-if="errorMessage" class="error-message-box">
       {{ errorMessage }}
     </div>
 
@@ -71,12 +79,18 @@
     </div>
 
     <!-- 検索結果がない場合 -->
-    <div v-else-if="!isLoading && searchQueryInternal" class="no-pokemon">
+    <div
+      v-else-if="!isLoading && searchQueryInternal"
+      class="error-message-box message-no-pokemon"
+    >
       「{{ searchQueryInternal }}」に一致するポケモンは見つかりませんでした。
     </div>
 
     <!-- ポケモンがない場合 -->
-    <div v-else-if="!isLoading && !isInitialLoad" class="no-pokemon">
+    <div
+      v-else-if="!isLoading && !isInitialLoad"
+      class="error-message-box message-no-pokemon"
+    >
       表示できるポケモンがいません。
     </div>
 
@@ -192,6 +206,14 @@ const saveSearchQuery = (query: string) => {
   } catch (error) {
     console.error("Failed to save search query", error);
   }
+};
+
+// 新しいメソッド: 検索入力クリア
+const clearSearchInput = () => {
+  searchQueryInput.value = "";
+  searchQueryInternal.value = "";
+  currentPage.value = 1;
+  fetchPokemons(1); // 検索条件なしで最初のページを再取得
 };
 
 // API通信中にスケルトンローディングを表示するためのフラグ
@@ -336,8 +358,10 @@ watch(searchQueryInput, (newQuery) => {
   }
 
   if (!newQuery.trim()) {
-    // 検索クエリが空の場合、検索モードを解除して通常のページネーションに戻る
+    // 検索クエリが空になったら、内部の検索クエリもクリアし、全件表示に戻す
+    // (クリアボタン経由でない場合、例えばユーザーが手動で全削除した場合など)
     if (searchQueryInternal.value) {
+      // 既に何か検索中の場合のみ実行
       searchQueryInternal.value = "";
       currentPage.value = 1;
       fetchPokemons(1);
@@ -455,17 +479,20 @@ onMounted(() => {
 
 /* 検索関連 */
 .search-input-area {
+  position: relative; /* クリアボタンの配置基準とするため */
   display: flex;
   justify-content: center;
   margin-bottom: 10px;
 }
 
 .search-input {
+  /* クリアボタンのスペースを考慮して、右側の角丸を調整 */
+  border-radius: 25px 0 0 25px;
+  /* 他のスタイルは維持 */
   width: 100%;
-  max-width: 700px; /* 500px から 700px に変更 */
-  padding: 12px 20px;
+  max-width: 700px;
+  padding: 12px 40px 12px 20px; /* 右パディングをクリアボタン分増やす */
   font-size: 1em;
-  border-radius: 25px 0 0 25px; /* ボタンと連結するため片側のみ丸める */
   border: 3px solid #e74c3c;
   box-shadow: 0 0 10px rgba(231, 76, 60, 0.5);
   transition: all 0.3s ease;
@@ -477,9 +504,27 @@ onMounted(() => {
   outline: none; /* フォーカス時のデフォルトアウトラインを消す */
 }
 
+.clear-search-button {
+  position: absolute;
+  right: 95px; /* 検索ボタンの幅を考慮して調整 */
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  font-size: 1.5em;
+  color: #aaa;
+  cursor: pointer;
+  padding: 0 10px;
+  line-height: 1;
+}
+
+.clear-search-button:hover {
+  color: #333;
+}
+
 .search-button {
-  border-radius: 0 25px 25px 0; /* ボタンと連結するため片側のみ丸める */
-  /* game-button スタイルが適用されているので、ここでは形状に関する調整のみ */
+  border-radius: 0 25px 25px 0;
+  /* position: relative; z-index:1; */ /* クリアボタンとの重なり対策が必要な場合 */
 }
 
 /* ゲーム風ボタン共通スタイル */
@@ -675,5 +720,24 @@ onMounted(() => {
   100% {
     transform: rotate(-5deg) scale(1);
   }
+}
+
+/* エラーメッセージボックスのスタイル */
+.error-message-box {
+  background-color: #f0f0f0; /* 薄いグレー背景 */
+  border: 3px solid #777; /* 少し濃いめの枠線 */
+  border-radius: 10px;
+  padding: 20px;
+  margin: 20px auto;
+  max-width: 600px;
+  text-align: center;
+  font-size: 1.1em;
+  color: #555; /* 少しだけ文字色を変えるなど */
+  box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.1); /* 内側に少し影 */
+}
+
+.message-no-pokemon {
+  /* 必要に応じて、検索結果なし特有のスタイルをここに追加 */
+  color: #555; /* 少しだけ文字色を変えるなど */
 }
 </style>
