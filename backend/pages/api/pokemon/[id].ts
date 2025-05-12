@@ -1,5 +1,5 @@
 // backend/pages/api/pokemon/[id].ts
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiRequest, NextApiResponse } from "next";
 
 // タイプの日本語マッピング
 const typeMap: { [key: string]: string } = {
@@ -103,11 +103,16 @@ interface PokemonStat {
   base_stat: number;
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  // CORS設定
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET,OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  // CORS設定 - すべてのオリジンを許可
+  const origin = req.headers.origin || "*";
+  res.setHeader("Access-Control-Allow-Origin", origin);
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.setHeader("Access-Control-Allow-Credentials", "true");
 
   // OPTIONSメソッドのプリフライトリクエスト対応
   if (req.method === "OPTIONS") {
@@ -125,9 +130,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const speciesData = await speciesResponse.json();
 
     // 日本語の名前を取得
-    const japaneseName = speciesData.names.find(
-      (entry: { language: { name: string }; name: string }) => entry.language.name === "ja"
-    )?.name || data.name;
+    const japaneseName =
+      speciesData.names.find(
+        (entry: { language: { name: string }; name: string }) =>
+          entry.language.name === "ja"
+      )?.name || data.name;
 
     // 生息地、色、形状を日本語に変換
     const habitat = habitatMap[speciesData.habitat?.name] || "不明";
@@ -140,8 +147,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       image: data.sprites.front_default,
       height: data.height,
       weight: data.weight,
-      types: data.types.map((typeInfo: PokemonType) => typeMap[typeInfo.type.name] || typeInfo.type.name),
-      abilities: data.abilities.map((abilityInfo: PokemonAbility) => abilityMap[abilityInfo.ability.name] || abilityInfo.ability.name),
+      types: data.types.map(
+        (typeInfo: PokemonType) =>
+          typeMap[typeInfo.type.name] || typeInfo.type.name
+      ),
+      abilities: data.abilities.map(
+        (abilityInfo: PokemonAbility) =>
+          abilityMap[abilityInfo.ability.name] || abilityInfo.ability.name
+      ),
       stats: data.stats.map((stat: PokemonStat) => ({
         name: statMap[stat.stat.name] || stat.stat.name,
         value: stat.base_stat,

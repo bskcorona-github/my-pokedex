@@ -8,9 +8,16 @@ const nextConfig: NextConfig = {
       {
         source: "/api/:path*", // すべてのAPIエンドポイントでCORS設定を適用
         headers: [
-          { key: "Access-Control-Allow-Origin", value: "https://my-pokedex-frontend.vercel.app" }, // フロントエンドURLを許可
-          { key: "Access-Control-Allow-Methods", value: "GET,POST,OPTIONS" },
-          { key: "Access-Control-Allow-Headers", value: "X-Requested-With, Content-Type" },
+          { key: "Access-Control-Allow-Origin", value: "*" }, // すべてのオリジンを許可
+          {
+            key: "Access-Control-Allow-Methods",
+            value: "GET,POST,PUT,DELETE,OPTIONS",
+          },
+          {
+            key: "Access-Control-Allow-Headers",
+            value: "X-Requested-With, Content-Type, Authorization",
+          },
+          { key: "Access-Control-Allow-Credentials", value: "true" },
         ],
       },
     ];

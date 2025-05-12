@@ -9,4 +9,13 @@ export default defineNuxtConfig({
       apiBase: process.env.API_BASE_URL || "http://localhost:3001/api",
     },
   },
+  // CORS問題を解決するために設定を追加
+  nitro: {
+    devProxy: {
+      "/api": {
+        target: "http://localhost:3001",
+        changeOrigin: true,
+      },
+    },
+  },
 });

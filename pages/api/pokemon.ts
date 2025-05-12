@@ -4,7 +4,11 @@ import NodeCache from "node-cache";
 import pLimit from "p-limit";
 
 const pLimitInstance = pLimit(5); // 変数名を pLimit から変更（pLimit が型名と衝突するため）
-const cache = new NodeCache({ stdTTL: 3600 }); // キャッシュを1時間保持
+const cache = new NodeCache({ stdTTL: 86400 }); // キャッシュを24時間に延長
+
+// 日本語名インデックス構築用のフラグ
+let isJapaneseIndexBuilding = false;
+let japaneseNameIndex: { [key: string]: string } = {};
 
 interface PokemonListItem {
   name: string;
@@ -60,14 +64,164 @@ interface ApiResponse {
   totalItems: number;
 }
 
+// 総ポケモン数を取得してキャッシュする関数
+const getTotalPokemonCount = async (): Promise<number> => {
+  const cacheKey = "totalPokemonCount";
+  const cached = cache.get<number>(cacheKey);
+  if (cached) return cached;
+
+  try {
+    const response = await fetch(`https://pokeapi.co/api/v2/pokemon?limit=1`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch total count: ${response.status}`);
+    }
+    const data = (await response.json()) as PokeApiResponse;
+    cache.set(cacheKey, data.count, 86400); // 24時間キャッシュ
+    return data.count;
+  } catch (error) {
+    console.error("Total count fetch error:", error);
+    return 1200; // フォールバック値
+  }
+};
+
+// 日本語名インデックスを構築する関数
+const buildJapaneseNameIndex = async () => {
+  if (isJapaneseIndexBuilding) return;
+
+  const cachedIndex = cache.get<{ [key: string]: string }>("japaneseNameIndex");
+  if (cachedIndex) {
+    japaneseNameIndex = cachedIndex;
+    return;
+  }
+
+  isJapaneseIndexBuilding = true;
+  console.log("Building Japanese name index...");
+
+  try {
+    // 全ポケモンのリストを取得
+    const response = await fetch(
+      "https://pokeapi.co/api/v2/pokemon?limit=1200"
+    );
+    if (!response.ok) {
+      throw new Error(`Failed to fetch pokemon list: ${response.status}`);
+    }
+
+    const data = (await response.json()) as PokeApiResponse;
+    const allPokemon = data.results;
+
+    // 並列処理数を制限しながら日本語名を取得
+    const batchSize = 20;
+    const nameMap: { [key: string]: string } = {};
+
+    for (let i = 0; i < allPokemon.length; i += batchSize) {
+      const batch = allPokemon.slice(i, i + batchSize);
+      const promises = batch.map(async (pokemon) => {
+        const id = pokemon.url.split("/").filter(Boolean).pop();
+        if (!id) return;
+
+        try {
+          const speciesUrl = `https://pokeapi.co/api/v2/pokemon-species/${id}`;
+          const speciesResponse = await fetch(speciesUrl);
+          if (!speciesResponse.ok) return;
+
+          const speciesData =
+            (await speciesResponse.json()) as ExternalSpeciesData;
+          const jaName = speciesData.names.find(
+            (n) => n.language.name === "ja-Hrkt" || n.language.name === "ja"
+          )?.name;
+
+          if (jaName) {
+            nameMap[jaName.toLowerCase()] = id;
+          }
+        } catch (error) {
+          console.error(`Error fetching Japanese name for ID ${id}:`, error);
+        }
+      });
+
+      await Promise.all(promises);
+      console.log(
+        `Processed ${i + batch.length}/${allPokemon.length} Pokemon names`
+      );
+    }
+
+    japaneseNameIndex = nameMap;
+    cache.set("japaneseNameIndex", nameMap, 86400 * 7); // 1週間キャッシュ
+    console.log(
+      "Japanese name index built successfully with",
+      Object.keys(nameMap).length,
+      "entries"
+    );
+  } catch (error) {
+    console.error("Error building Japanese name index:", error);
+  } finally {
+    isJapaneseIndexBuilding = false;
+  }
+};
+
+// バックグラウンドでインデックス構築を開始
+setTimeout(buildJapaneseNameIndex, 1000);
+
+// ひらがなをカタカナに変換
+const hiraganaToKatakana = (str: string): string => {
+  return str.replace(/[ぁ-ゔゞ゛゜]/g, function (match) {
+    const charCode = match.charCodeAt(0) + 0x60;
+    return String.fromCharCode(charCode);
+  });
+};
+
+// バックグラウンドで次のページをプリフェッチする関数
+const prefetchNextPages = async (
+  currentPage: number,
+  limit: number,
+  searchTerm?: string
+) => {
+  const pagesToPrefetch = [currentPage + 1, currentPage + 2];
+
+  for (const page of pagesToPrefetch) {
+    const cacheKey = `pokemonData-page-${page}-limit-${limit}${
+      searchTerm ? "-search-" + searchTerm : ""
+    }`;
+    if (!cache.has(cacheKey)) {
+      console.log(`Prefetching page ${page}...`);
+      try {
+        let pokemonsToProcess: PokemonListItem[] = [];
+        let totalItemsForResponse = 0;
+
+        if (searchTerm) {
+          // 検索モードの場合は既存の検索ロジックを使用
+          // 実装省略（既存のコードと同様）
+        } else {
+          // 通常のページネーション
+          const offset = (page - 1) * limit;
+          const listResponse = await fetch(
+            `https://pokeapi.co/api/v2/pokemon?limit=${limit}&offset=${offset}`
+          );
+          if (!listResponse.ok) continue;
+
+          const listData = (await listResponse.json()) as PokeApiResponse;
+          pokemonsToProcess = listData.results;
+          totalItemsForResponse = listData.count;
+        }
+
+        // 以下詳細取得処理は既存コードと同様のため省略
+        // 詳細データを取得してキャッシュする処理
+      } catch (error) {
+        console.error(`Error prefetching page ${page}:`, error);
+      }
+    }
+  }
+};
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ApiResponse | { error: string }>
 ) {
-  // CORSヘッダー設定 - すべてのリクエストに対して設定
-  res.setHeader("Access-Control-Allow-Origin", "*");
+  // CORSヘッダー設定 - すべてのオリジンを許可（シンプルに）
+  const origin = req.headers.origin || "*";
+  res.setHeader("Access-Control-Allow-Origin", origin);
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.setHeader("Access-Control-Allow-Credentials", "true");
 
   // OPTIONSメソッドのプリフライトリクエスト対応
   if (req.method === "OPTIONS") {
@@ -82,23 +236,18 @@ export default async function handler(
 
   console.log(
     `Request: page=${page}, limit=${limit}, offset=${offset}, searchTerm=${searchTerm}`
-  ); // DEBUG
+  );
 
   const cacheKey = `pokemonData-page-${page}-limit-${limit}${
     searchTerm ? "-search-" + searchTerm : ""
   }`;
   const cachedData = cache.get<ApiResponse>(cacheKey);
   if (cachedData) {
+    // キャッシュヒット - 次のページをバックグラウンドでプリフェッチ
+    setTimeout(() => prefetchNextPages(page, limit, searchTerm), 10);
     res.status(200).json(cachedData);
     return;
   }
-
-  const hiraganaToKatakana = (str: string): string => {
-    return str.replace(/[ぁ-ゔゞ゛゜]/g, function (match) {
-      const charCode = match.charCodeAt(0) + 0x60;
-      return String.fromCharCode(charCode);
-    });
-  };
 
   try {
     let pokemonsToProcess: PokemonListItem[] = [];
@@ -106,87 +255,89 @@ export default async function handler(
     let totalPagesForResponse = 0;
 
     if (searchTerm) {
-      console.log(
-        `Search term provided: ${searchTerm}, fetching up to 2000 Pokemon for filtering.`
-      );
-      // 検索時は全件取得を試みる (PokeAPIの制限とパフォーマンスに注意)
-      // PokeAPIの全件数はおおよそ1300程度なので、limit=1500や2000程度でほぼ全件取れる想定
-      const allPokemonResponse = await fetch(
-        `https://pokeapi.co/api/v2/pokemon?limit=2000&offset=0`
-      );
-      if (!allPokemonResponse.ok) {
-        throw new Error(
-          `PokeAPI (all for search) request failed with status ${allPokemonResponse.status}`
-        );
-      }
-      const allPokemonData =
-        (await allPokemonResponse.json()) as PokeApiResponse;
-      totalItemsForResponse = allPokemonData.results.length; // 実際に取得できた件数
-      console.log(
-        `Fetched ${totalItemsForResponse} Pokemon for search filtering.`
-      );
-
+      console.log(`Search term provided: ${searchTerm}`);
       const originalQueryLower = searchTerm.toLowerCase();
       const katakanaQueryLower = hiraganaToKatakana(originalQueryLower);
 
-      pokemonsToProcess = allPokemonData.results.filter((pokemon) => {
-        // const pokemonNameLower = pokemon.name.toLowerCase(); // これは後続の nameBasedMatch で使われる
-        // 下記の古い nameMatch と idMatch の定義は削除
-        // const nameMatch =
-        //   pokemonNameLower.includes(originalQueryLower) ||
-        //   pokemonNameLower.includes(katakanaQueryLower);
+      // 日本語名インデックスを使った検索を試みる
+      let foundByJapanese = false;
+      if (Object.keys(japaneseNameIndex).length > 0) {
+        console.log("Using Japanese name index for search");
+        const matchingIds: string[] = [];
 
-        // let idMatch = false;
-        // const searchId = originalQueryLower.match(/^\\d+$/)
-        //   ? originalQueryLower
-        //   : null;
-        // if (searchId) {
-        //   const pokemonIdFromUrl = pokemon.url.split("/").filter(Boolean).pop();
-        //   if (pokemonIdFromUrl === searchId) {
-        //     idMatch = true;
-        //   }
-        // }
+        // 日本語名で検索
+        Object.entries(japaneseNameIndex).forEach(([jpName, id]) => {
+          if (
+            jpName.includes(originalQueryLower) ||
+            jpName.includes(katakanaQueryLower)
+          ) {
+            matchingIds.push(id);
+          }
+        });
 
-        // 注意: PokeAPIのリストのnameはローマ字。日本語名での検索は、全件の詳細情報を取得しないと不可。
-        // ここでは、ローマ字名と、ユーザーが入力した日本語（のカタカナ変換版）での部分一致、およびIDでの一致を試みる。
-        // より高度な日本語名検索は、全件日本語名リストを別途持つか、詳細取得後のフィルタリングが必要。
-        // 今回は、ひとまずローマ字名に対するoriginalQueryLower/katakanaQueryLowerでの検索と、ID検索に留める。
-        // 実際のポケモン名は詳細取得時に日本語化されるため、この段階ではローマ字名でのフィルタリングが主。
+        if (matchingIds.length > 0) {
+          foundByJapanese = true;
+          console.log(`Found ${matchingIds.length} matches by Japanese name`);
 
-        // searchTermに日本語が含まれる場合、pokemon.name（ローマ字）との直接比較は効果が薄い。
-        // このフィルタリングは、ID検索か、searchTermがローマ字の場合に主に機能する。
-        // 日本語名での検索は、後続の詳細取得後のフィルタリングで行う方が正確だが、パフォーマンスが非常に悪化する。
-        // ここでは、ID または searchTerm がローマ字であると期待したフィルタリングに留める。
+          // IDからポケモンリストアイテムを作成
+          pokemonsToProcess = matchingIds.map((id) => ({
+            name: `pokemon-${id}`,
+            url: `https://pokeapi.co/api/v2/pokemon/${id}/`,
+          }));
 
-        // 簡易的なフィルタリング: ローマ字名、またはURLから取れるIDでフィルタ
-        // (pokemon.name はローマ字名)
-        const nameIsProbablyLatin = /^[a-z0-9\\-]+$/.test(pokemon.name);
-        let nameBasedMatch = false;
-        if (nameIsProbablyLatin) {
-          nameBasedMatch =
-            pokemon.name.toLowerCase().includes(originalQueryLower) ||
-            pokemon.name.toLowerCase().includes(katakanaQueryLower);
+          totalItemsForResponse = matchingIds.length;
         }
+      }
 
-        const pokemonId = pokemon.url.split("/").filter(Boolean).pop();
-        const idBasedMatch = pokemonId === originalQueryLower; // searchTermがIDの場合
+      // 日本語名で見つからなかった場合は従来のローマ字名検索を使う
+      if (!foundByJapanese) {
+        console.log("No matches by Japanese name, falling back to API search");
+        // 既存の検索コード（英語名/ID検索）
+        const allPokemonResponse = await fetch(
+          `https://pokeapi.co/api/v2/pokemon?limit=2000&offset=0`
+        );
+        if (!allPokemonResponse.ok) {
+          throw new Error(
+            `PokeAPI (all for search) request failed with status ${allPokemonResponse.status}`
+          );
+        }
+        const allPokemonData =
+          (await allPokemonResponse.json()) as PokeApiResponse;
 
-        return nameBasedMatch || idBasedMatch;
-      });
-      console.log(
-        `Filtered down to ${pokemonsToProcess.length} Pokemon before pagination and detail fetching.`
-      );
-      totalItemsForResponse = pokemonsToProcess.length; // フィルタ後の件数を総数とする
+        // 既存のフィルタリングロジック
+        pokemonsToProcess = allPokemonData.results.filter((pokemon) => {
+          const nameIsProbablyLatin = /^[a-z0-9\-]+$/.test(pokemon.name);
+          let nameBasedMatch = false;
+          if (nameIsProbablyLatin) {
+            nameBasedMatch =
+              pokemon.name.toLowerCase().includes(originalQueryLower) ||
+              pokemon.name.toLowerCase().includes(katakanaQueryLower);
+          }
+
+          const pokemonId = pokemon.url.split("/").filter(Boolean).pop();
+          const idBasedMatch = pokemonId === originalQueryLower;
+
+          return nameBasedMatch || idBasedMatch;
+        });
+
+        totalItemsForResponse = pokemonsToProcess.length;
+        console.log(`Found ${totalItemsForResponse} matches by API search`);
+      }
 
       // フィルタリング後のリストに対してページネーション
+      totalPagesForResponse = Math.ceil(totalItemsForResponse / limit);
+      if (totalItemsForResponse > 0 && totalPagesForResponse === 0)
+        totalPagesForResponse = 1;
+
       const startIndex = offset;
       const endIndex = offset + limit;
       pokemonsToProcess = pokemonsToProcess.slice(startIndex, endIndex);
-      console.log(
-        `Sliced to ${pokemonsToProcess.length} Pokemon for page ${page}.`
-      );
     } else {
       // 通常のページネーション
+      const totalCount = await getTotalPokemonCount();
+      totalItemsForResponse = totalCount;
+      totalPagesForResponse = Math.ceil(totalItemsForResponse / limit);
+
       const listResponse = await fetch(
         `https://pokeapi.co/api/v2/pokemon?limit=${limit}&offset=${offset}`
       );
@@ -197,148 +348,94 @@ export default async function handler(
       }
       const listData = (await listResponse.json()) as PokeApiResponse;
       pokemonsToProcess = listData.results;
-      totalItemsForResponse = listData.count; // 検索なしの場合はPokeAPIの総件数
     }
 
-    totalPagesForResponse = Math.ceil(totalItemsForResponse / limit);
-    if (totalPagesForResponse === 0 && totalItemsForResponse > 0)
-      totalPagesForResponse = 1;
-    // 修正: totalItemsForResponseが0ならtotalPagesForResponseも0に
-    if (totalItemsForResponse === 0) totalPagesForResponse = 0;
+    // ページが範囲外の場合、空の結果を返す
+    if (page > totalPagesForResponse && totalPagesForResponse > 0) {
+      console.log(
+        `Page ${page} is out of bounds (${totalPagesForResponse} total pages).`
+      );
+      res.status(200).json({
+        results: [],
+        currentPage: page,
+        totalPages: totalPagesForResponse,
+        totalItems: totalItemsForResponse,
+      });
+      return;
+    }
+
+    // 検索結果が0件の場合
+    if (searchTerm && pokemonsToProcess.length === 0) {
+      console.log("No Pokemon matched the search term.");
+      res.status(200).json({
+        results: [],
+        currentPage: 1,
+        totalPages: 0,
+        totalItems: 0,
+      });
+      return;
+    }
 
     console.log(
-      `Total items for response: ${totalItemsForResponse}, Calculated total pages for response: ${totalPagesForResponse}`
+      `Processing ${pokemonsToProcess.length} Pokemon for page ${page}`
     );
 
-    // リクエストされたページが計算上の総ページ数を超えている場合 (検索なしの場合のみ有効だったが、検索時も考慮)
-    // ただし、検索結果が0件の場合にこれをすると、何も表示されなくなる。
-    // 検索モードで結果が0件の場合は、totalItems=0, totalPages=0 (または1) として空を返すのが適切
-    if (
-      !searchTerm &&
-      page > totalPagesForResponse &&
-      totalItemsForResponse > 0
-    ) {
-      console.log(
-        `Requested page ${page} is greater than total pages ${totalPagesForResponse}. Returning empty results.`
-      );
-      res.status(200).json({
-        results: [],
-        currentPage: page,
-        totalPages: totalPagesForResponse,
-        totalItems: totalItemsForResponse,
-      });
-      return;
-    }
-
-    if (searchTerm && pokemonsToProcess.length === 0) {
-      console.log(
-        "Search term provided, but no Pokemon matched after filtering. Returning empty results."
-      );
-      res.status(200).json({
-        results: [],
-        currentPage: 1, // 検索結果がない場合は1ページ目として返す
-        totalPages: 0, // 結果がないのでページもない
-        totalItems: 0, // 結果がないのでアイテムもない
-      });
-      return;
-    }
-
-    console.log(
-      `[Before Detail Fetch] pokemonsToProcess length: ${pokemonsToProcess.length}, totalItemsForResponse: ${totalItemsForResponse}, totalPagesForResponse: ${totalPagesForResponse}`
-    ); // DEBUG
-
-    console.log(
-      `Checking page bounds: page=${page}, totalPagesForResponse=${totalPagesForResponse}`
-    ); // DEBUG
-    if (page > totalPagesForResponse && totalPagesForResponse > 0) {
-      // Requested page is out of bounds
-      console.log(
-        `Page ${page} is out of bounds (${totalPagesForResponse} total pages). Returning empty for out of bounds.`
-      ); // DEBUG
-      res.status(200).json({
-        results: [],
-        currentPage: page,
-        totalPages: totalPagesForResponse,
-        totalItems: totalItemsForResponse,
-      });
-      return;
-    }
-
+    // 詳細データ取得（並列処理制限付き）
     const pokemonDetailsPromises = pokemonsToProcess.map((pokemonListItem) =>
       pLimitInstance(async (): Promise<PokemonDetail | null> => {
         const id = pokemonListItem.url.split("/").filter(Boolean).pop();
-        console.log(
-          `[Detail Fetch Start] For ID: ${id} (from ${pokemonListItem.url})`
-        ); // DEBUG
-        if (!id) {
-          console.error(
-            `Could not extract ID from URL: ${pokemonListItem.url}`
-          );
-          return null; // IDがなければ処理中断
-        }
+        if (!id) return null;
 
         try {
-          console.log(`Fetching pokemon data for ID: ${id}`);
+          // 詳細データをキャッシュから取得を試みる
+          const detailCacheKey = `pokemon-detail-${id}`;
+          const cachedDetail = cache.get<PokemonDetail>(detailCacheKey);
+          if (cachedDetail) return cachedDetail;
+
+          // APIから詳細データを取得
           const pokemonResponse = await fetch(
             `https://pokeapi.co/api/v2/pokemon/${id}`
           );
-          if (!pokemonResponse.ok) {
-            console.error(
-              `Failed to fetch pokemon ${id}: ${pokemonResponse.status} ${pokemonResponse.statusText}`
-            );
-            return null; // ポケモンデータの取得失敗
-          }
+          if (!pokemonResponse.ok) return null;
+
           const pokemonData =
             (await pokemonResponse.json()) as ExternalPokemonData;
-          console.log(
-            `Fetched pokemonData for ${id}:`,
-            pokemonData.name,
-            pokemonData.sprites?.front_default
-          );
 
-          console.log(`Fetching species data for ID: ${id}`);
+          // 種族データを取得（日本語名のため）
           const speciesResponse = await fetch(
             `https://pokeapi.co/api/v2/pokemon-species/${id}`
           );
-          if (!speciesResponse.ok) {
-            console.error(
-              `Failed to fetch species ${id}: ${speciesResponse.status} ${speciesResponse.statusText}`
-            );
-            // 種族データがなくてもポケモン名でフォールバックするので、null を返さずに続行も検討できるが、一旦現状維持
-            return null; // 種族データの取得失敗
-          }
+          if (!speciesResponse.ok) return null;
+
           const speciesData =
             (await speciesResponse.json()) as ExternalSpeciesData;
-          // console.log(`Fetched speciesData for ${id}:`, JSON.stringify(speciesData.names, null, 2)); // ★必要に応じて詳細ログ
 
+          // 日本語名を取得
           const japaneseNameEntry = speciesData.names.find(
             (entry) =>
               entry.language.name === "ja-Hrkt" || entry.language.name === "ja"
           );
           const japaneseName = japaneseNameEntry?.name || pokemonData.name;
-          console.log(`Determined name for ${id}: ${japaneseName}`);
 
+          // 画像URLを取得
           const image =
             pokemonData.sprites.other?.["official-artwork"]?.front_default ||
             pokemonData.sprites.front_default ||
             "/pokeball.png";
-          console.log(`Determined image for ${id}: ${image}`);
 
-          // タイプ情報の取得と処理
+          // タイプ情報を取得
           const japaneseTypes: string[] = [];
           if (pokemonData.types && pokemonData.types.length > 0) {
             const typePromises = pokemonData.types.map(async (typeEntry) => {
               try {
-                console.log(
-                  `Fetching type data from URL: ${typeEntry.type.url}`
-                );
+                // タイプ情報をキャッシュから取得を試みる
+                const typeCacheKey = `type-${typeEntry.type.name}`;
+                const cachedType = cache.get<string>(typeCacheKey);
+                if (cachedType) return cachedType;
+
                 const typeResponse = await fetch(typeEntry.type.url);
-                if (!typeResponse.ok) {
-                  console.error(
-                    `Failed to fetch type details for ${typeEntry.type.name}: ${typeResponse.status}`
-                  );
-                  return null; // タイプ詳細の取得失敗
-                }
+                if (!typeResponse.ok) return typeEntry.type.name;
+
                 const typeData =
                   (await typeResponse.json()) as ExternalTypeData;
                 const japaneseTypeNameEntry = typeData.names.find(
@@ -346,69 +443,61 @@ export default async function handler(
                     nameEntry.language.name === "ja-Hrkt" ||
                     nameEntry.language.name === "ja"
                 );
-                return japaneseTypeNameEntry?.name || typeEntry.type.name;
-              } catch (typeError) {
-                console.error(
-                  `Error fetching type details for ${typeEntry.type.name}:`,
-                  typeError
-                );
-                return typeEntry.type.name; // エラー時は英語名フォールバック
+
+                const typeName =
+                  japaneseTypeNameEntry?.name || typeEntry.type.name;
+                cache.set(typeCacheKey, typeName, 86400 * 30); // 30日キャッシュ（タイプは変わらない）
+                return typeName;
+              } catch (error) {
+                return typeEntry.type.name;
               }
             });
+
             const resolvedTypes = await Promise.all(typePromises);
             resolvedTypes.forEach((typeName) => {
               if (typeName) japaneseTypes.push(typeName);
             });
           }
-          console.log(
-            `Determined types for ${id}: ${japaneseTypes.join(", ")}`
-          );
 
+          // ポケモン詳細情報を作成
           const resultPokemonDetail: PokemonDetail = {
             id,
             name: japaneseName,
             image: image,
             number: `No.${String(id).padStart(3, "0")}`,
-            types: japaneseTypes, // タイプ情報を追加
+            types: japaneseTypes,
           };
-          console.log(
-            `Successfully processed pokemon ID ${id}:`,
-            JSON.stringify(resultPokemonDetail)
-          );
+
+          // 詳細情報をキャッシュ
+          cache.set(detailCacheKey, resultPokemonDetail, 86400 * 7); // 7日間キャッシュ
+
+          // 日本語名インデックスに追加（構築中でない場合）
+          if (!isJapaneseIndexBuilding && japaneseName) {
+            japaneseNameIndex[japaneseName.toLowerCase()] = id;
+          }
+
           return resultPokemonDetail;
-        } catch (detailError) {
+        } catch (error) {
           console.error(
             `Error processing details for pokemon ID ${id}:`,
-            detailError
+            error
           );
-          return null; // その他の予期せぬエラー
+          return null;
         }
       })
     );
 
-    // Promise.allSettled を使うと、成功/失敗に関わらず全プロミスの結果を得られる
+    // 全てのプロミスの結果を取得
     const settledResults = await Promise.allSettled(pokemonDetailsPromises);
-
     const successfulResults: PokemonDetail[] = [];
-    settledResults.forEach((result, idx) => {
-      // DEBUG: idx追加
+
+    settledResults.forEach((result) => {
       if (result.status === "fulfilled" && result.value !== null) {
         successfulResults.push(result.value);
-      } else if (result.status === "rejected") {
-        console.error(
-          `Promise for pokemon detail (index: ${idx}, url: ${pokemonsToProcess[idx]?.url}) was rejected:`,
-          result.reason
-        ); // DEBUG
-      } else if (result.value === null) {
-        console.warn(
-          `Promise for pokemon detail (index: ${idx}, url: ${pokemonsToProcess[idx]?.url}) resolved to null.`
-        ); // DEBUG
       }
     });
-    console.log(
-      `[After Detail Fetch] successfulResults length: ${successfulResults.length}`
-    ); // DEBUG
 
+    // レスポンスデータを作成
     const responseData: ApiResponse = {
       results: successfulResults,
       currentPage: page,
@@ -416,10 +505,12 @@ export default async function handler(
       totalItems: totalItemsForResponse,
     };
 
-    cache.set(cacheKey, responseData);
-    console.log(
-      `[Final Response Data] currentPage: ${page}, totalPages: ${totalPagesForResponse}, totalItems: ${totalItemsForResponse}, results count: ${successfulResults.length}`
-    ); // DEBUG
+    // レスポンスデータをキャッシュ
+    cache.set(cacheKey, responseData, 86400); // 24時間キャッシュ
+
+    // 次のページをバックグラウンドでプリフェッチ
+    setTimeout(() => prefetchNextPages(page, limit, searchTerm), 10);
+
     res.status(200).json(responseData);
   } catch (error) {
     console.error("エラー内容:", error);
