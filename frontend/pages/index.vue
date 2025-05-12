@@ -898,4 +898,33 @@ onMounted(() => {
 
 /* 検索入力エリアのスタイル調整 */
 /* ... existing code ... */
+
+.recent-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.recent-tag {
+  display: inline-block;
+  background: #fff;
+  border: 1.5px solid #e74c3c;
+  color: #e74c3c;
+  border-radius: 16px;
+  padding: 4px 12px;
+  font-size: 0.95em;
+  margin: 2px 0;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, border 0.2s;
+  user-select: none;
+}
+
+.recent-tag.selected,
+.recent-tag:focus {
+  background: #e74c3c;
+  color: #fff;
+  border-color: #c0392b;
+  outline: none;
+}
 </style>
