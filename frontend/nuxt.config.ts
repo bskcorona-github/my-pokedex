@@ -21,7 +21,8 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   runtimeConfig: {
     public: {
-      apiBase: process.env.API_BASE_URL || "http://localhost:3001/api",
+      apiBase:
+        process.env.API_BASE_URL || "https://my-pokedex-backend.vercel.app/api",
     },
   },
   // CORS問題を解決するために設定を追加
