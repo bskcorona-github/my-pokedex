@@ -62,6 +62,44 @@ interface ApiResponse {
 
 // 日本語名インデックスを追加
 const japaneseNameIndex: { [key: string]: string } = {};
+// ローマ字検索用のマッピング
+const romajiNameIndex: { [key: string]: string } = {};
+
+// ローマ字マッピングデータ（代表的なポケモン）
+const popularPokemonRomaji: { [key: string]: string[] } = {
+  // 御三家
+  フシギダネ: ["fushigidane", "bulbasaur"],
+  ヒトカゲ: ["hitokage", "charmander"],
+  ゼニガメ: ["zenigame", "squirtle"],
+  チコリータ: ["chikorita"],
+  ヒノアラシ: ["hinoarashi", "cyndaquil"],
+  ワニノコ: ["waninoko", "totodile"],
+  キモリ: ["kimori", "treecko"],
+  アチャモ: ["achamo", "torchic"],
+  ミズゴロウ: ["mizugorou", "mudkip"],
+
+  // 人気ポケモン
+  ピカチュウ: ["pikachu"],
+  イーブイ: ["eevee", "iibui"],
+  ミュウ: ["mew", "myuu"],
+  ミュウツー: ["mewtwo", "myuutsuu"],
+  カビゴン: ["kabigon", "snorlax"],
+  プリン: ["purin", "jigglypuff"],
+  カイリュー: ["kairyuu", "dragonite"],
+  ゲンガー: ["gengar", "gengaa"],
+  ルカリオ: ["lucario", "rukario"],
+  ガラガラ: ["garagara", "marowak"],
+  ギャラドス: ["gyarados", "gyaradosu"],
+
+  // 特徴的な名前
+  リザードン: ["lizardon", "charizard"],
+  フシギバナ: ["fushigibana", "venusaur"],
+  カメックス: ["kamex", "blastoise"],
+  サンダース: ["thunders", "sandaasu", "jolteon"],
+  ブースター: ["booster", "buusutaa", "flareon"],
+  シャワーズ: ["showers", "shawaazu", "vaporeon"],
+};
+
 let isJapaneseIndexBuilding = false;
 
 // 日本語名インデックスを構築する関数
@@ -105,6 +143,13 @@ const buildJapaneseNameIndex = async () => {
 
           if (jaName) {
             japaneseNameIndex[jaName.toLowerCase()] = id;
+
+            // ローマ字インデックスを構築
+            if (popularPokemonRomaji[jaName]) {
+              popularPokemonRomaji[jaName].forEach((romaji) => {
+                romajiNameIndex[romaji.toLowerCase()] = id;
+              });
+            }
           }
         } catch (error) {
           console.error(`Error fetching Japanese name for ID ${id}:`, error);
@@ -120,6 +165,11 @@ const buildJapaneseNameIndex = async () => {
     console.log(
       "Japanese name index built successfully with",
       Object.keys(japaneseNameIndex).length,
+      "entries"
+    );
+    console.log(
+      "Romaji name index built with",
+      Object.keys(romajiNameIndex).length,
       "entries"
     );
   } catch (error) {
@@ -200,9 +250,28 @@ export default async function handler(
           }
         });
 
+        // ローマ字名でも検索
+        if (matchingIds.length === 0) {
+          console.log("Checking romaji index for:", originalQueryLower);
+          Object.entries(romajiNameIndex).forEach(([romajiName, id]) => {
+            if (
+              romajiName.includes(originalQueryLower) ||
+              originalQueryLower.includes(romajiName)
+            ) {
+              matchingIds.push(id);
+            }
+          });
+
+          if (matchingIds.length > 0) {
+            console.log(`Found ${matchingIds.length} matches by romaji name`);
+          }
+        }
+
         if (matchingIds.length > 0) {
           foundByJapanese = true;
-          console.log(`Found ${matchingIds.length} matches by Japanese name`);
+          console.log(
+            `Found ${matchingIds.length} matches by Japanese or romaji name`
+          );
 
           // IDからポケモンリストアイテムを作成
           pokemonsToProcess = matchingIds.map((id) => ({
@@ -239,8 +308,35 @@ export default async function handler(
               pokemon.name.toLowerCase().includes(katakanaQueryLower);
           }
 
-          const pokemonId = pokemon.url.split("/").filter(Boolean).pop();
-          const idBasedMatch = pokemonId === originalQueryLower;
+          // IDベースの検索を強化
+          let idBasedMatch = false;
+          const pokemonIdFromUrl = pokemon.url.split("/").filter(Boolean).pop();
+
+          if (pokemonIdFromUrl) {
+            // クエリが純粋な数値かどうかをチェック
+            const isQueryNumeric = /^\d+$/.test(originalQueryLower);
+
+            if (isQueryNumeric) {
+              // クエリとポケモンIDを数値として比較 (先頭のゼロを無視)
+              const queryAsInt = parseInt(originalQueryLower, 10);
+              const pokemonIdAsInt = parseInt(pokemonIdFromUrl, 10);
+              if (!isNaN(queryAsInt) && !isNaN(pokemonIdAsInt)) {
+                idBasedMatch = pokemonIdAsInt === queryAsInt;
+              }
+            } else {
+              // クエリが数値でない場合は、従来通り文字列として比較 (例: "special-id-123")
+              idBasedMatch =
+                pokemonIdFromUrl.toLowerCase() === originalQueryLower;
+            }
+          }
+
+          // デバッグログを追加して、IDと名前の一致状況を確認
+          // if (idBasedMatch) {
+          //   console.log(`ID match: query='${originalQueryLower}', pokemonId='${pokemonIdFromUrl}', pokemonName='${pokemon.name}'`);
+          // }
+          // if (nameBasedMatch && !idBasedMatch) { // IDで一致せず名前で一致した場合のみログ
+          //   console.log(`Name match: query='${originalQueryLower}', pokemonName='${pokemon.name}', pokemonId='${pokemonIdFromUrl}'`);
+          // }
 
           return nameBasedMatch || idBasedMatch;
         });
