@@ -397,7 +397,7 @@ onMounted(async () => {
 .pokeball-loader {
   width: 100px; /* 少し大きめに */
   height: 100px;
-  background-image: url("/images/pokeball-icon.png");
+  background-image: url("/pokeball.png");
   background-size: contain;
   background-repeat: no-repeat;
   animation: spin 1s linear infinite, wobble 1.5s ease-in-out infinite alternate;

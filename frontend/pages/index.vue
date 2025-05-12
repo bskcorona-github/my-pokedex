@@ -641,7 +641,7 @@ onMounted(() => {
 .pokeball-loader {
   width: 80px;
   height: 80px;
-  background-image: url("/images/pokeball-icon.png"); /* モンスターボールの画像 */
+  background-image: url("/pokeball.png"); /* モンスターボールの画像 */
   background-size: contain;
   background-repeat: no-repeat;
   animation: spin 1s linear infinite, wobble 1.5s ease-in-out infinite alternate;
