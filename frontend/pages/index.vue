@@ -714,9 +714,103 @@ onMounted(() => {
 }
 
 @media (max-width: 480px) {
+  .container {
+    padding: 15px; /* 全体的なパディングを少し減らす */
+    font-size: 1em; /* 全体フォントサイズを少し下げる */
+  }
+
+  .page-header h1 {
+    font-size: 2.5em; /* タイトルフォントサイズを縮小 (元: 3.2em) */
+    margin-bottom: 25px; /* マージンも調整 */
+    text-shadow: 1px 1px 0 #fff, 2px 2px 0 rgba(0, 0, 0, 0.1); /* 影も少し控えめに */
+  }
+
+  .search-input-area {
+    flex-direction: column; /* 縦積みに変更 */
+    align-items: center;
+  }
+
+  .search-input {
+    max-width: 100%; /* 横幅いっぱいにする */
+    border-radius: 20px; /* 角丸を全体に適用 */
+    padding: 10px 15px;
+    margin-bottom: 10px; /* 下にマージン追加 */
+    font-size: 0.95em;
+    padding-right: 35px; /* クリアボタン考慮 */
+  }
+
+  .clear-search-button {
+    right: 10px; /* 入力欄の右端に配置 */
+    top: 19px; /* inputのpaddingとfont-sizeから調整 (元のtop: 50% + transform から変更) */
+    /* transform: translateY(-50%); 元のtransformは不要になるか、調整が必要 */
+  }
+
+  .search-button {
+    width: 100%; /* 横幅いっぱいにする */
+    max-width: 300px; /* あまり広がりすぎないように */
+    border-radius: 20px; /* 角丸を全体に適用 */
+    padding: 10px 15px;
+    font-size: 1em;
+  }
+
+  .recent-searches {
+    font-size: 0.9em;
+  }
+  .recent-tag {
+    padding: 4px 8px;
+    margin: 3px;
+  }
+
   .pokemon-grid {
     grid-template-columns: repeat(2, 1fr); /* 2体固定 */
     gap: 10px;
+  }
+
+  .pokemon-card {
+    border-radius: 10px;
+  }
+  .pokemon-image-wrapper {
+    padding: 10px;
+  }
+  .pokemon-info {
+    padding: 10px;
+  }
+  .pokemon-number {
+    font-size: 0.75em;
+  }
+  .pokemon-name {
+    font-size: 0.95em;
+    line-height: 1.1;
+  }
+
+  .pagination-controls {
+    font-size: 0.9em;
+    /* flex-wrap: wrap; */
+    /* justify-content: center; */
+  }
+  .pagination-button {
+    width: 38px;
+    height: 38px;
+    margin: 0 4px;
+    font-size: 1em;
+  }
+  .pagination-info .total-items {
+    display: block;
+    font-size: 0.85em;
+    margin-top: 2px;
+  }
+
+  .error-message-box {
+    padding: 15px;
+    font-size: 1em;
+  }
+
+  .loading-text {
+    font-size: 1.3em;
+  }
+  .pokeball-loader {
+    width: 60px;
+    height: 60px;
   }
   /* ... 他の480px以下のスタイル ... */
 }

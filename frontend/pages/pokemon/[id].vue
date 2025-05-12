@@ -788,41 +788,127 @@ onMounted(async () => {
 
 /* レスポンシブ対応 */
 @media (max-width: 600px) {
+  .pokemon-detail-container {
+    padding: 15px;
+    font-size: 1em; /* 全体フォントサイズを少し下げる */
+  }
+
   .pokemon-layout {
     flex-direction: column;
   }
 
+  .pokemon-header {
+    margin-bottom: 20px; /* マージン調整 */
+  }
+
   .pokemon-header h1 {
-    font-size: 1.8em;
-    margin-top: 30px;
+    font-size: 2em; /* タイトルフォントサイズ縮小 (元: 2.2em、600px時: 1.8em) */
+    margin-top: 20px; /* 600px時のマージンを調整 */
+    text-shadow: 1px 1px 0 #fff, 2px 2px 0 rgba(0, 0, 0, 0.1); /* 影も少し控えめに */
+  }
+
+  .pokemon-number {
+    /* h1内の図鑑番号 */
+    font-size: 0.5em;
   }
 
   .back-button.small {
+    /* ヘッダー内の「一覧へ戻る」 */
     position: static;
     display: block;
-    margin: 0 0 15px;
+    margin: 0 auto 15px; /* 中央揃え */
+    padding: 8px 12px;
+    font-size: 0.9em;
+  }
+
+  .pokemon-image-container {
+    min-width: auto; /* 縦並びになるのでmin-width解除 */
+    margin-bottom: 20px;
+  }
+  .pokemon-image {
+    max-height: 280px; /* 画像が大きくなりすぎないように */
+  }
+
+  .pokemon-info-container {
+    min-width: auto;
+  }
+  .pokemon-detail-item {
+    font-size: 0.95em; /* 詳細項目のフォントサイズ */
+    margin: 10px 0;
+  }
+  .pokemon-detail-item span:first-child {
+    /* ラベル部分 */
+    width: 70px; /* ラベル幅を少し詰める */
+  }
+  .abilities-list {
+    width: calc(100% - 75px); /* ラベル幅に応じて調整 */
+  }
+  .type-tag {
+    padding: 4px 10px;
+    font-size: 0.85em;
+  }
+
+  .stats-section {
+    margin-top: 30px;
+    padding-top: 15px;
+  }
+  .stats-section h2 {
+    font-size: 1.5em; /* セクションタイトル */
+  }
+  .stat-item {
+    margin-bottom: 10px;
+  }
+  .stat-name {
+    width: 80px; /* ステータス名を短縮 */
+    font-size: 0.9em;
+  }
+  .stat-bar-container {
+    height: 12px; /* バーの高さ */
+    margin: 0 10px;
+  }
+  .stat-value {
+    width: 30px;
+    font-size: 0.9em;
   }
 
   .navigation-links {
-    flex-wrap: wrap;
+    flex-direction: column; /* ナビゲーションボタンを縦積みに */
+    align-items: stretch; /* ボタン幅を揃える */
+    gap: 10px; /* ボタン間の隙間 */
   }
 
-  .back-button {
-    order: 3;
-    margin-top: 15px;
-    width: 100%;
-  }
-
-  .nav-link {
-    margin-bottom: 10px;
+  .nav-link,
+  .navigation-links .back-button {
+    /* フッターの「一覧に戻る」も対象 */
+    width: 100%; /* ボタン幅を100%に */
+    margin: 0; /* 個別のマージンをリセット */
+    padding: 10px 15px;
+    font-size: 0.95em;
+    text-align: center; /* テキストを中央揃え */
+    order: 0; /* orderをリセットしてHTML順にするか、必要に応じて調整 */
   }
 
   .prev-link {
     order: 1;
   }
-
-  .next-link {
+  .navigation-links .back-button {
     order: 2;
+  } /* フッターの一覧へ戻る */
+  .next-link {
+    order: 3;
+  }
+
+  .error-message-box {
+    padding: 15px;
+    font-size: 1em;
+  }
+
+  .loading-text {
+    font-size: 1.5em;
+  }
+  .pokeball-loader {
+    width: 80px;
+    height: 80px;
   }
 }
 </style>
