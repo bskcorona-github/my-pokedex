@@ -499,7 +499,7 @@ onMounted(() => {
 <style scoped>
 /* ポケモン風背景 */
 .pokedex-background {
-  background-image: url("/images/pokedex-background.png"); /* 仮の背景画像パス */
+  background-image: url("/pokedex-background.png"); /* 仮の背景画像パス */
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;

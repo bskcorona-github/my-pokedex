@@ -332,7 +332,7 @@ onMounted(async () => {
 <style scoped>
 /* ポケモン風背景（index.vueと共通化も検討） */
 .pokedex-background {
-  background-image: url("/images/pokedex-background.png");
+  background-image: url("/pokedex-background.png");
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
