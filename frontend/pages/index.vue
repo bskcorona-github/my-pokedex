@@ -58,6 +58,11 @@
       <p class="loading-text">NOW LOADING...</p>
     </div>
 
+    <!-- ★★★ 追加: 図鑑番号重複警告 ★★★ -->
+    <div v-if="showDuplicateNumberWarning" class="search-warning">
+      <p>💡 同じ図鑑番号のポケモンが複数含まれています。</p>
+    </div>
+
     <!-- ポケモンリスト -->
     <div v-else-if="pokemons.length > 0" class="pokemon-grid">
       <div
@@ -180,6 +185,29 @@ const selectedRecentSearchIndex = ref(-1);
 // ページタイトル設定
 useHead({
   title: "ポケモン一覧 | ポケモン図鑑",
+});
+
+// ★★★ 追加: 図鑑番号重複警告の表示判定 ★★★
+const showDuplicateNumberWarning = computed(() => {
+  // 検索中でない、または結果が2件未満の場合は表示しない
+  if (!isSearching.value || pokemons.value.length < 2) {
+    return false;
+  }
+  // 検索クエリが数字または "No." + 数字形式か判定
+  const looksLikeNumber = /^(?:No\\.)?\\d+$/.test(searchQueryInternal.value); // . をエスケープ
+  if (!looksLikeNumber) {
+    return false; // 番号検索でなければ表示しない
+  }
+
+  // 結果セット内の図鑑番号リストを取得
+  const numbers = pokemons.value.map((p) => p.number).filter((n) => n); // numberが存在するもののみ
+  if (numbers.length < 2) return false; // 有効な番号が2つ未満なら表示しない
+
+  // 図鑑番号のユニークなセットを作成
+  const uniqueNumbers = new Set(numbers);
+
+  // ユニークな番号の数 < 全体の番号の数 なら重複あり
+  return uniqueNumbers.size < numbers.length;
 });
 
 const config = useRuntimeConfig();
@@ -931,5 +959,22 @@ onMounted(() => {
   color: #fff;
   border-color: #c0392b;
   outline: none;
+}
+
+/* ★★★ 追加: 検索警告メッセージ ★★★ */
+.search-warning {
+  background-color: #fffbe6; /* 薄い黄色 */
+  border: 1px solid #ffe58f; /* 黄色系の枠線 */
+  border-radius: 8px;
+  padding: 10px 15px;
+  margin: 15px auto;
+  max-width: 600px;
+  text-align: center;
+  color: #8a6d3b; /* 暗めの茶色系 */
+  font-size: 0.95em;
+}
+
+.search-warning p {
+  margin: 0;
 }
 </style>
