@@ -29,7 +29,7 @@
 
       <!-- 最近の検索 -->
       <div v-if="recentSearches.length > 0" class="recent-searches">
-        <span class="recent-label">最近の検索:</span>
+        <span class="recent-label">最近の検索</span>
         <div class="recent-tags">
           <span
             v-for="(query, index) in recentSearches"
@@ -918,6 +918,11 @@ onMounted(() => {
   cursor: pointer;
   transition: background 0.2s, color 0.2s, border 0.2s;
   user-select: none;
+}
+
+.recent-tag:hover:not(.selected):not(:focus) {
+  border-color: #c0392b; /* 少し濃い赤の枠線 */
+  color: #c0392b; /* 少し濃い赤の文字色 */
 }
 
 .recent-tag.selected,
