@@ -1,0 +1,26 @@
+[
+  {
+    "id": "1",
+    "name_en": "bulbasaur",
+    "name_ja": "フシギダネ",
+    "number": "001"
+  },
+  {
+    "id": "2",
+    "name_en": "ivysaur",
+    "name_ja": "フシギソウ",
+    "number": "002"
+  },
+  {
+    "id": "3",
+    "name_en": "venusaur",
+    "name_ja": "フシギバナ",
+    "number": "003"
+  },
+  {
+    "id": "10034",
+    "name_en": "venusaur-mega",
+    "name_ja": "メガフシギバナ",
+    "number": "003"
+  }
+]
