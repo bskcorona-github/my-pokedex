@@ -1,5 +1,7 @@
 // backend/pages/api/pokemon/[id].ts
 import type { NextApiRequest, NextApiResponse } from "next";
+import fs from "fs";
+import path from "path";
 
 // タイプの日本語マッピング
 const typeMap: { [key: string]: string } = {
@@ -103,6 +105,24 @@ interface PokemonStat {
   base_stat: number;
 }
 
+// ローカルデータから図鑑番号を取得するための関数
+interface PokemonDataEntry {
+  id: string;
+  name_en: string;
+  name_ja: string;
+  number: string;
+}
+
+// JSONファイルからデータを読み込む
+let pokemonData: PokemonDataEntry[] = [];
+try {
+  const jsonPath = path.resolve("./pokemonData.json");
+  const jsonData = fs.readFileSync(jsonPath, "utf-8");
+  pokemonData = JSON.parse(jsonData);
+} catch (error) {
+  console.error("Error loading pokemonData.json:", error);
+}
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -123,6 +143,18 @@ export default async function handler(
   const { id } = req.query;
 
   try {
+    // IDから実際のポケモンデータを取得
+    const pokemonEntry = pokemonData.find((entry) => entry.id === id);
+    if (!pokemonEntry) {
+      throw new Error(`ポケモンIDが見つかりません: ${id}`);
+    }
+
+    // 同じ図鑑番号を持つすべてのポケモンを取得
+    const sameNumberPokemons = pokemonData.filter(
+      (entry) => entry.number === pokemonEntry.number
+    );
+
+    // 通常のAPIリクエスト
     const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`);
     const data = await response.json();
 
@@ -141,9 +173,18 @@ export default async function handler(
     const color = colorMap[speciesData.color?.name] || "不明";
     const shape = shapeMap[speciesData.shape?.name] || "不明";
 
+    // 同じ図鑑番号のフォーム一覧を作成
+    const forms = sameNumberPokemons.map((pokemon) => ({
+      id: pokemon.id,
+      name: pokemon.name_ja,
+      number: pokemon.number,
+    }));
+
     // 応答データの作成
     res.status(200).json({
+      id: id as string,
       name: japaneseName,
+      number: pokemonEntry.number,
       image: data.sprites.front_default,
       height: data.height,
       weight: data.weight,
@@ -162,6 +203,7 @@ export default async function handler(
       habitat,
       color,
       shape,
+      forms: forms.length > 1 ? forms : undefined, // 複数フォームがある場合のみ追加
     });
   } catch (error) {
     console.error("エラー内容:", error);

@@ -26,6 +26,25 @@
         </h1>
       </header>
 
+      <!-- フォーム切り替え -->
+      <div
+        v-if="pokemon.forms && pokemon.forms.length > 1"
+        class="forms-selector"
+      >
+        <span class="forms-label">フォーム:</span>
+        <div class="forms-buttons">
+          <button
+            v-for="form in pokemon.forms"
+            :key="form.id"
+            @click="switchForm(form.id)"
+            class="form-button"
+            :class="{ active: form.id === route.params.id }"
+          >
+            {{ form.name }}
+          </button>
+        </div>
+      </div>
+
       <div class="pokemon-layout">
         <div class="pokemon-image-container">
           <img :src="pokemon.image" :alt="pokemon.name" class="pokemon-image" />
@@ -122,6 +141,12 @@ import { useRoute, useRouter } from "vue-router";
 import { useRuntimeConfig } from "#app";
 import { useHead } from "nuxt/app";
 
+interface PokemonForm {
+  id: string;
+  name: string;
+  number: string;
+}
+
 interface PokemonStat {
   name: string;
   value: number;
@@ -142,6 +167,7 @@ interface PokemonDetail {
   habitat?: string;
   color?: string;
   shape?: string;
+  forms?: PokemonForm[];
 }
 
 const route = useRoute();
@@ -307,6 +333,12 @@ const preloadPokemon = async (id: string) => {
   } catch (error) {
     console.error(`Failed to preload pokemon ${id}:`, error);
   }
+};
+
+// フォーム切り替え関数
+const switchForm = (formId: string) => {
+  if (formId === route.params.id) return;
+  router.push(`/pokemon/${formId}`);
 };
 
 // ルートパラメータの変更を監視
@@ -910,5 +942,49 @@ onMounted(async () => {
     width: 80px;
     height: 80px;
   }
+}
+
+/* フォーム切り替えスタイル */
+.forms-selector {
+  margin: 10px 0 20px;
+  padding: 10px;
+  background-color: rgba(245, 245, 245, 0.8);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.forms-label {
+  font-weight: bold;
+  margin-bottom: 8px;
+  color: #3c5aa6; /* ポケモンブルー */
+}
+
+.forms-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+}
+
+.form-button {
+  padding: 6px 12px;
+  border: 2px solid #3c5aa6;
+  border-radius: 20px;
+  background-color: white;
+  color: #3c5aa6;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.form-button:hover {
+  background-color: #e8f0ff;
+}
+
+.form-button.active {
+  background-color: #3c5aa6;
+  color: white;
 }
 </style>
