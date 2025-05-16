@@ -161,7 +161,7 @@ export default async function handler(
       const queryNumber = searchTerm.startsWith("No.")
         ? searchTerm.substring(3)
         : searchTerm;
-      const isNumberQuery = /^\\d+$/.test(queryNumber);
+      const isNumberQuery = /^\d+$/.test(queryNumber);
 
       filteredPokemon = allPokemonData.filter((pokemon) => {
         // 日本語名チェック (部分一致)

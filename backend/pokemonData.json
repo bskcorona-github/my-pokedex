@@ -48,12 +48,6 @@
     "number": "006"
   },
   {
-    "id": "10035",
-    "name_en": "charizard-mega-y",
-    "name_ja": "メガリザードン",
-    "number": "006"
-  },
-  {
     "id": "7",
     "name_en": "squirtle",
     "name_ja": "ゼニガメ",
@@ -980,12 +974,6 @@
   {
     "id": "10043",
     "name_en": "mewtwo-mega-x",
-    "name_ja": "メガミュウツー",
-    "number": "150"
-  },
-  {
-    "id": "10044",
-    "name_en": "mewtwo-mega-y",
     "name_ja": "メガミュウツー",
     "number": "150"
   },
@@ -3140,7 +3128,7 @@
   {
     "id": "478",
     "name_en": "froslass",
-    "name_ja": "ユキメノコ",
+    "name_ja": "ユ���メノコ",
     "number": "478"
   },
   {
@@ -6656,24 +6644,12 @@
   {
     "id": "10035",
     "name_en": "charizard-mega-y",
-    "name_ja": "メガリザードン",
-    "number": "10034"
-  },
-  {
-    "id": "10035",
-    "name_en": "charizard-mega-y",
     "name_ja": "リザードン",
     "number": "10035"
   },
   {
     "id": "10034",
     "name_en": "charizard-mega-x",
-    "name_ja": "メガリザードン",
-    "number": "10035"
-  },
-  {
-    "id": "10035",
-    "name_en": "charizard-mega-y",
     "name_ja": "メガリザードン",
     "number": "10035"
   },
@@ -6776,24 +6752,12 @@
   {
     "id": "10044",
     "name_en": "mewtwo-mega-y",
-    "name_ja": "メガミュウツー",
-    "number": "10043"
-  },
-  {
-    "id": "10044",
-    "name_en": "mewtwo-mega-y",
     "name_ja": "ミュウツー",
     "number": "10044"
   },
   {
     "id": "10043",
     "name_en": "mewtwo-mega-x",
-    "name_ja": "メガミュウツー",
-    "number": "10044"
-  },
-  {
-    "id": "10044",
-    "name_en": "mewtwo-mega-y",
     "name_ja": "メガミュウツー",
     "number": "10044"
   },
@@ -7940,12 +7904,6 @@
   {
     "id": "10034",
     "name_en": "charizard-mega-x",
-    "name_ja": "メガリザードン",
-    "number": "10196"
-  },
-  {
-    "id": "10035",
-    "name_en": "charizard-mega-y",
     "name_ja": "メガリザードン",
     "number": "10196"
   },

@@ -51,6 +51,9 @@ async function main() {
     // ポケモンの詳細情報を取得
     const pokemonData = [];
 
+    // メガ進化の重複を防ぐための登録済みチェック用
+    const registeredMegaForms = new Set();
+
     // 進行状況表示用
     let completed = 0;
     const total = pokemonList.results.length;
@@ -75,19 +78,30 @@ async function main() {
         number: String(pokemonDetail.id).padStart(3, "0"),
       });
 
-      // メガ進化があれば追加
+      // メガ進化があれば追加（各ポケモンにつき1種類のみ）
       const megaForms = speciesData.varieties.filter((variety) =>
         variety.pokemon.name.includes("-mega")
       );
 
-      for (const megaForm of megaForms) {
-        const megaDetail = await fetchFromPokeApi(megaForm.pokemon.url);
-        pokemonData.push({
-          id: String(megaDetail.id),
-          name_en: megaForm.pokemon.name,
-          name_ja: `メガ${jaName}`,
-          number: String(pokemonDetail.id).padStart(3, "0"),
-        });
+      if (megaForms.length > 0) {
+        // メガ進化は基本的に最初の一つだけを使用
+        const megaForm = megaForms[0];
+        const baseNumber = String(pokemonDetail.id).padStart(3, "0");
+
+        // 既に同じ図鑑番号のメガ進化が登録されていないか確認
+        if (!registeredMegaForms.has(baseNumber)) {
+          // メガ進化を登録
+          const megaDetail = await fetchFromPokeApi(megaForm.pokemon.url);
+          pokemonData.push({
+            id: String(megaDetail.id),
+            name_en: megaForm.pokemon.name,
+            name_ja: `メガ${jaName}`,
+            number: baseNumber, // 元のポケモンと同じ図鑑番号を使用
+          });
+
+          // 登録済みとしてマーク
+          registeredMegaForms.add(baseNumber);
+        }
       }
 
       // 進行状況表示
