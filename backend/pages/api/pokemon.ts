@@ -228,7 +228,11 @@ async function fetchPokemonDetailsForList(
   const pokemonDetailsPromises = pokemonList.map(
     async (pokemonEntry): Promise<PokemonDetail | null> => {
       try {
-        const detailUrl = `https://pokeapi.co/api/v2/pokemon/${pokemonEntry.id}`;
+        // メガ進化ポケモンやその他の特殊なフォームは name_en を使ってAPIリクエスト
+        const apiIdentifier = pokemonEntry.name_en.includes("-")
+          ? pokemonEntry.name_en
+          : pokemonEntry.id;
+        const detailUrl = `https://pokeapi.co/api/v2/pokemon/${apiIdentifier}`;
         const detailResponse = await fetch(detailUrl);
 
         if (!detailResponse.ok) {
